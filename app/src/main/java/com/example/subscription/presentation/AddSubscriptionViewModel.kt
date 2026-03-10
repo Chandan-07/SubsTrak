@@ -43,16 +43,13 @@ class AddSubscriptionViewModel(
         viewModelScope.launch {
 
             repository.addSubscription(subscription)
-            Log.d("SAVE_SUB", "Saved subscription")
-            val list = repository.getSubscriptions().toList()
-
-            Log.d("DB_TEST", "items in db = ${list.size}")
         }
     }
 
     fun addSubscription(subscription: Subscription) {
 
         viewModelScope.launch {
+
             repository.addSubscription(convertSubscriptionEntity(subscription))
         }
     }
@@ -67,14 +64,19 @@ class AddSubscriptionViewModel(
     }
 
     fun convertSubscriptionEntity(subscription: Subscription): SubscriptionEntity {
+
+        val nextBillingDate =
+            calculateNextBillingDate(subscription.startDate, subscription.billingCycle)
+
         return SubscriptionEntity(
+            id = subscription.id.toInt(),
             name = subscription.name,
             price = subscription.price,
             currency = subscription.currency,
             billingCycle = subscription.billingCycle,
             category = subscription.category,
             startDate = subscription.startDate,
-            nextBillingDate = subscription.nextBillingDate,
+            nextBillingDate = nextBillingDate,
             reminderEnabled = subscription.reminderEnabled
         )
     }
