@@ -3,6 +3,7 @@ package com.example.subscription.screens
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,8 @@ fun AddSubscriptionScreen(
     onSave: (Subscription) -> Unit
 ) {
 
+    Log.d("TAG", "AddSubscriptionScreen: "+existingSubscription)
+
     var serviceName by remember {
         mutableStateOf(existingSubscription?.name ?: "")
     }
@@ -61,14 +64,14 @@ fun AddSubscriptionScreen(
     var startDate by remember {
         mutableStateOf(existingSubscription?.startDate)
     }
-    var currency by remember { mutableStateOf("₹") }
+    var currency by remember { mutableStateOf(existingSubscription?.currency?:"₹") }
     val currencyOptions = listOf("₹", "$", "€")
 
     val billingOptions = listOf("Monthly", "Yearly")
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    var category by remember { mutableStateOf("Entertainment") }
+    var category by remember { mutableStateOf(existingSubscription?.category?:"Entertainment") }
     val categoryOptions = listOf(
         "Entertainment",
         "Productivity",
@@ -89,8 +92,20 @@ fun AddSubscriptionScreen(
     val viewModel: AddSubscriptionViewModel = viewModel(
         factory = AddSubscriptionViewModelFactory(repository)
     )
-    var reminderEnabled by remember { mutableStateOf(false) }
+    var reminderEnabled by remember { mutableStateOf(existingSubscription?.reminderEnabled ?: false) }
 
+    LaunchedEffect(existingSubscription) {
+
+        existingSubscription?.let {
+
+            serviceName = it.name
+            price = it.price.toString()
+            billingCycle = it.billingCycle
+            category = it.category
+            startDate = it.startDate
+            reminderEnabled = it.reminderEnabled
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(

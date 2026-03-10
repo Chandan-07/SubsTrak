@@ -80,7 +80,8 @@ class AddSubscriptionViewModel(
     }
 
     suspend fun getSubscription(id: Int): Subscription? {
-
+        Log.d("ASDNKJS", "getSubscription: "+repository
+            .getSubscription(id))
         return repository
             .getSubscription(id)
             ?.toDomain()

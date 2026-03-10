@@ -127,7 +127,6 @@ class MainActivity : ComponentActivity() {
                                     } else {
                                         viewModel.updateSubscription(entity)
                                     }
-
                                     navController.popBackStack()
                                 }
                             )
