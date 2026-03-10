@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
+import com.example.subscription.Utility.calculateNextBillingDate
 import com.example.subscription.data.Subscription
 import com.example.subscription.data.db.DatabaseProvider
 import com.example.subscription.data.db.SubscriptionDatabase
@@ -192,22 +193,13 @@ fun AddSubscriptionScreen(
                         startDate != null
                     ) {
 
-                        viewModel.saveSubscription(
-                            name = serviceName,
-                            price = price.toDouble(),
-                            currency = currency,
-                            billingCycle = billingCycle,
-                            category = category,
-                            startDate = startDate!!,
-                            reminderEnabled = reminderEnabled
-                        )
                         val subscription = Subscription(
-                            id = existingSubscription?.id ?: "",
+                            id = existingSubscription?.id.toString() ?: "",
                             name = serviceName,
                             price = price.toDouble(),
                             billingCycle = billingCycle,
                             startDate = startDate!!,
-                            nextBillingDate = 0L,
+                            nextBillingDate = calculateNextBillingDate(startDate!!, billingCycle),
                             currency = currency,
                             category = category,
                             reminderEnabled = reminderEnabled

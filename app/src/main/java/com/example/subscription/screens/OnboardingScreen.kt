@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,11 +31,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.subscription.R
+import com.example.subscription.data.db.OnboardingPreference
 import com.example.subscription.ui.data.pages
 import kotlinx.coroutines.launch
 
@@ -87,30 +94,57 @@ fun OnboardingScreen(
             currentPage = pagerState.currentPage
         )
         Spacer(modifier = Modifier.height(20.dp))
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
 
-        Button(
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            onClick = {
-
-                if (pagerState.currentPage == pages.lastIndex) {
-                    onGetStarted()
-                } else {
-                    scope.launch {
-                        pagerState.animateScrollToPage(
-                            pagerState.currentPage + 1
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF1976D2), // blue
+                            Color(0xFF42A5F5)  // light blue
                         )
+                    ),
+                    shape = RoundedCornerShape(30.dp)
+                )
+        ) {
+            Button(
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp),
+                onClick = {
+
+                    if (pagerState.currentPage == pages.lastIndex) {
+                        scope.launch {
+                            OnboardingPreference.setCompleted(context)
+                        }
+                        onGetStarted()
+                    } else {
+                        scope.launch {
+                            pagerState.animateScrollToPage(
+                                pagerState.currentPage + 1
+                            )
+                        }
                     }
                 }
-            }
-        ) {
+            ) {
 
-            Text(
-                if (pagerState.currentPage == pages.lastIndex)
-                    "Get Started"
-                else
-                    "Next"
-            )
+                Text(
+                    text = if (pagerState.currentPage == pages.lastIndex)
+                        "Get Started"
+                    else
+                        "Next",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+
     }
 }
 
@@ -128,7 +162,7 @@ fun PagerIndicator(
 
             val color =
                 if (index == currentPage)
-                    Color.Black
+                    colorResource(R.color.blue)
                 else
                     Color.LightGray
 
