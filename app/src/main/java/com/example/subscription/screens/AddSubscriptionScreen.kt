@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,11 +26,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
+import com.example.subscription.R
 import com.example.subscription.Utility.calculateNextBillingDate
 import com.example.subscription.data.Subscription
 import com.example.subscription.data.db.DatabaseProvider
@@ -45,7 +57,8 @@ import java.util.Locale
 @Composable
 fun AddSubscriptionScreen(
     existingSubscription: Subscription? = null,
-    onSave: (Subscription) -> Unit
+    onSave: (Subscription) -> Unit,
+    onBack: () -> Unit
 ) {
 
     Log.d("TAG", "AddSubscriptionScreen: "+existingSubscription)
@@ -63,7 +76,7 @@ fun AddSubscriptionScreen(
     }
 
     var startDate by remember {
-        mutableStateOf(existingSubscription?.startDate)
+        mutableStateOf(existingSubscription?.startDate ?: System.currentTimeMillis())
     }
     var currency by remember { mutableStateOf(existingSubscription?.currency?:"₹") }
     val currencyOptions = listOf("₹", "$", "€")
@@ -107,87 +120,182 @@ fun AddSubscriptionScreen(
             reminderEnabled = it.reminderEnabled
         }
     }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { TopAppBar(
-                    title = {
-                        Text(
-                            if (existingSubscription == null)
-                                "Add Subscription"
-                            else
-                                "Edit Subscription"
-                        )
-                    }
-                ) }
-            )
-        }
-    ) { padding ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = colorResource(R.color.light_grey))
+            .padding(16.dp),
+    ) {
+        Box{
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                IconButton(
+                    onClick = { onBack() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = colorResource(R.color.dark_blue)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column {
+
+                    Text(
+                        if (existingSubscription == null)
+                            "Add Subscription"
+                        else
+                            "Edit Subscription",
+                        color = colorResource(R.color.dark_blue),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                }
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.padding(top = 20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
         ) {
 
-            OutlinedTextField(
-                value = serviceName,
-                onValueChange = { serviceName = it },
-                label = { Text("Service Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            PriceSection(
-                price = price,
-                currency = currency,
-                currencyOptions = currencyOptions,
-                onPriceChange = { price = it },
-                onCurrencySelected = { currency = it }
-            )
-
-            DropdownField(
-                label = "Billing Cycle",
-                selected = billingCycle,
-                options = billingOptions,
-                onSelected = { billingCycle = it }
-            )
-
-            DropdownField(
-                label = "Category",
-                selected = category,
-                options = categoryOptions,
-                onSelected = { category = it }
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true }
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
 
                 OutlinedTextField(
-                    value = startDate?.let { formatDate(it) } ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = false,
-                    label = { Text("Subscription Start Date") },
-                    modifier = Modifier.fillMaxWidth()
+                    value = serviceName,
+                    onValueChange = { serviceName = it },
+                    label = { Text("Service Name") },
+                    placeholder = { Text("e.g. Netflix, Spotify") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+
+                        // Background inside the text field
+                        focusedContainerColor = Color(0xFFFFFFFF),
+                        unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                        // Border colors
+                        focusedBorderColor = Color(0xFF1976D2),
+                        unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                        // Cursor
+                        cursorColor = Color(0xFF1976D2)
+                    )
+                )
+
+                PriceSection(
+                    price = price,
+                    currency = currency,
+                    currencyOptions = currencyOptions,
+                    onPriceChange = { price = it },
+                    onCurrencySelected = { currency = it }
                 )
             }
+        }
 
-            ReminderToggle(
-                enabled = reminderEnabled,
-                onToggle = { reminderEnabled = it }
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
             )
+        ) {
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                DropdownField(
+                    label = "Billing Cycle",
+                    selected = billingCycle,
+                    options = billingOptions,
+                    onSelected = { billingCycle = it }
+                )
+
+                DropdownField(
+                    label = "Category",
+                    selected = category,
+                    options = categoryOptions,
+                    onSelected = { category = it }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier,
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
+        ) {
+
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                ) {
+
+                    OutlinedTextField(
+                        value = startDate?.let { formatDate(it) } ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("Subscription Date") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                ReminderToggle(
+                    enabled = reminderEnabled,
+                    onToggle = { reminderEnabled = it }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color(0xFF1976D2),
+                            Color(0xFF42A5F5)
+                        )
+                    ),
+                    RoundedCornerShape(14.dp)
+                )
+        ) {
 
             Button(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp),
                 onClick = {
-
                     if (serviceName.isNotEmpty() &&
                         price.isNotEmpty() &&
                         startDate != null
@@ -198,8 +306,8 @@ fun AddSubscriptionScreen(
                             name = serviceName,
                             price = price.toDouble(),
                             billingCycle = billingCycle,
-                            startDate = startDate!!,
-                            nextBillingDate = calculateNextBillingDate(startDate!!, billingCycle),
+                            startDate = startDate,
+                            nextBillingDate = calculateNextBillingDate(startDate, billingCycle),
                             currency = currency,
                             category = category,
                             reminderEnabled = reminderEnabled
@@ -209,7 +317,7 @@ fun AddSubscriptionScreen(
                     }
                 }
             ) {
-                Text("Save Subscription")
+                Text("Save Subscription", color = Color.White, fontSize = 18.sp)
             }
         }
     }
@@ -223,7 +331,7 @@ fun AddSubscriptionScreen(
 
                 TextButton(onClick = {
 
-                    startDate = datePickerState.selectedDateMillis
+                    startDate = datePickerState.selectedDateMillis?: System.currentTimeMillis()
                     showDatePicker = false
 
                 }) {
@@ -235,6 +343,8 @@ fun AddSubscriptionScreen(
         }
     }
 }
+
+
 
 @Composable
 fun ReminderToggle(
@@ -268,7 +378,17 @@ fun ReminderToggle(
                 }
 
                 onToggle(it)
-            }
+            },
+            colors = SwitchDefaults.colors(
+
+                // When switch is ON
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF1976D2),
+
+                // When switch is OFF
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = Color(0xFFCFD8DC)
+            )
         )
     }
 }
@@ -310,7 +430,20 @@ fun PriceSection(
             value = price,
             onValueChange = onPriceChange,
             label = { Text("Price") },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            colors = OutlinedTextFieldDefaults.colors(
+
+                // Background inside the text field
+                focusedContainerColor = Color(0xFFFFFFFF),
+                unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                // Border colors
+                focusedBorderColor = Color(0xFF1976D2),
+                unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                // Cursor
+                cursorColor = Color(0xFF1976D2)
+            )
         )
     }
 }
@@ -362,7 +495,20 @@ fun DropdownField(
             },
             modifier = modifier
                 .menuAnchor()
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+
+                // Background inside the text field
+                focusedContainerColor = Color(0xFFFFFFFF),
+                unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                // Border colors
+                focusedBorderColor = Color(0xFF1976D2),
+                unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                // Cursor
+                cursorColor = Color(0xFF1976D2)
+            )
         )
 
         ExposedDropdownMenu(
