@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.subscription"
+    namespace = "com.tracker.subscription"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.subscription"
+        applicationId = "com.tracker.subscription"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -98,4 +98,7 @@ dependencies {
 
 // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.35.0-alpha")
 }
