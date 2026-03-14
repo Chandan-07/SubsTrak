@@ -1,5 +1,6 @@
 package com.tracker.subscription.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tracker.subscription.data.DashboardData
@@ -38,17 +39,19 @@ class DashboardViewModel(
 
                 val upcomingRenewals =
                     subs.sortedBy { it.nextBillingDate }
-                        .take(3)
+                    .filter { it.subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value }
+                    .take(3)
                         .map {
 
                             Renewal(
                                 name = it.name,
                                 price = it.price,
-                                daysLeft = getDaysLeft(it.nextBillingDate)
+                                daysLeft = getDaysLeft(it.nextBillingDate),
+                                subscriptionType = it.subscriptionType
                             )
                         }
-                val subscriptionList =
-                    subs.map { it.toDomain() }
+
+                val subscriptionList = subs.map { it.toDomain() }
 
                 val freeTrialList =
                     subs.filter { it.subscriptionType == SubscriptionType.FREE_TRIAL.value }
@@ -57,11 +60,13 @@ class DashboardViewModel(
                             Renewal(
                                 name = it.name,
                                 price = it.price,
-                                daysLeft = getDaysLeft(it.nextBillingDate)
+                                daysLeft = getDaysLeft(it.nextBillingDate),
+                                subscriptionType = it.subscriptionType
                             )
                         }
 
 
+                Log.d("ASFSDF", "observeSubscriptions: "+freeTrialList.size+" - "+upcomingRenewals.size+" - "+subscriptionList.size)
                 val dashboardData = DashboardData(
                     monthlySpend = monthlySpend,
                     upcomingRenewals = upcomingRenewals,

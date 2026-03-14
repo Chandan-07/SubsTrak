@@ -448,7 +448,7 @@ fun PriceSection(
         OutlinedTextField(
             value = price,
             onValueChange = onPriceChange,
-            label = { Text("Price") },
+            label = { Text("Price", color = colorResource(R.color.dark_blue)) },
             modifier = Modifier.weight(1f),
             colors = OutlinedTextFieldDefaults.colors(
 
@@ -458,7 +458,7 @@ fun PriceSection(
 
                 // Border colors
                 focusedBorderColor = Color(0xFF1976D2),
-                unfocusedBorderColor = Color(0xFFB0BEC5),
+                unfocusedBorderColor = Color(0xFF798181),
 
                 // Cursor
                 cursorColor = Color(0xFF1976D2)
