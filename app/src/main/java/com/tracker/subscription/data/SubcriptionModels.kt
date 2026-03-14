@@ -16,7 +16,8 @@ data class Subscription(
 data class Renewal(
     val name: String,
     val price: Double,
-    val daysLeft: Int
+    val daysLeft: Int,
+    val subscriptionType: String,
 )
 
 data class DashboardData(

@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.tracker.subscription.R
+import com.tracker.subscription.data.SubscriptionType
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.DashboardViewModelFactory
@@ -154,62 +155,73 @@ fun DashboardScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colorResource(R.color.dark_blue),
                                 fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             )
 
-                            Text(
-                                text = "View All",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.clickable {
-                                    navController.navigate("view_all_free_trials")
-                                }.background(
-                                    color = colorResource(R.color.orrange),
-                                    shape = RoundedCornerShape(20.dp)
-                                ).padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
-                            )
+                            if (!data.freeTrials.isEmpty() && data.freeTrials.size >2) {
+                                Text(
+                                    text = "View All",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.clickable {
+                                        navController.navigate("view_all_free_trials")
+                                    }.background(
+                                        color = colorResource(R.color.orrange),
+                                        shape = RoundedCornerShape(20.dp)
+                                    ).padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
+                                )
+                            }
+
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     items(data.freeTrials) {
                         RenewalItem(it)
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    if (!data.upcomingRenewals.isEmpty() ) {
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
 
-                            Text(
-                                text = "Upcoming Renewals",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = colorResource(R.color.dark_blue),
-                                fontSize = 18.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
+                                Text(
+                                    text = "Upcoming Renewals",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = colorResource(R.color.dark_blue),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
 
-                            Text(
-                                text = "View All",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.clickable {
-                                    navController.navigate("view_all_renewals")
-                                }.background(
-                                    color = colorResource(R.color.orrange),
-                                    shape = RoundedCornerShape(20.dp)
-                                ).padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
-                            )
+                                if (data.upcomingRenewals.size >2){
+                                    Text(
+                                        text = "View All",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.clickable {
+                                            navController.navigate("view_all_renewals")
+                                        }.background(
+                                            color = colorResource(R.color.orrange),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ).padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
+                                    )
+                                }
+
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-
                     }
+
 
                     items(data.upcomingRenewals) {
                         RenewalItem(it)
@@ -348,14 +360,28 @@ fun RenewalItem(renewal: Renewal) {
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = renewalText(renewal.daysLeft),
+                        text = renewalText(renewal.daysLeft, renewal.subscriptionType),
                         color = renewalColor(renewal.daysLeft),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
 
-            Text(formatCurrency(renewal.price))
+            if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value){
+                Text(
+                    text = "Free",
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(
+                            color = Color(0xFF209323), // green
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                )
+            } else {
+                Text(formatCurrency(renewal.price))
+            }
+
         }
     }
 }
@@ -363,18 +389,24 @@ fun avatarColor(name: String): Color {
 
     val colors = listOf(
         Color(0xFF980702), // red
-        Color(0xFF4CAF50), // purple
-        Color(0xFF42A5F5), // blue
-        Color(0xFF26A69A), // teal
+        Color(0xFF97E099), // purple
+        Color(0xFF456D8D), // blue
+        Color(0xFFFFC107), // teal
         Color(0xFF791296), // orange
-        Color(0xFF66BB6A)  // green
+        Color(0xFF720623)  // green
     )
 
     val index = abs(name.hashCode()) % colors.size
     return colors[index]
 }
-fun renewalText(daysLeft: Int): String {
+fun renewalText(daysLeft: Int, subscriptionType: String): String {
     return when {
+        subscriptionType == SubscriptionType.FREE_TRIAL.value -> when (daysLeft) {
+            0 -> "Free trial ends today"
+            1 -> "Free trial ends tomorrow"
+            else -> "Free trial ends in ${abs(daysLeft)} days"
+        }
+
         daysLeft < 0 -> "Renewed ${abs(daysLeft)} days ago"
         daysLeft == 0 -> "Renews today"
         daysLeft == 1 -> "Renews tomorrow"

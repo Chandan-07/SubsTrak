@@ -22,10 +22,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.tracker.subscription" />
+                  <option name="mobileSdkAppId" value="1:1018938809495:android:1cbbbd3f45e4190b6b9dd2" />
+                  <option name="projectId" value="substrak-823b3" />
+                  <option name="projectNumber" value="1018938809495" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
