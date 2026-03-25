@@ -2,15 +2,62 @@ package com.tracker.subscription.data.repo
 
 import android.content.Context
 import androidx.work.WorkManager
+import com.tracker.subscription.R
 import com.tracker.subscription.ReminderScheduler
+import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.dao.SubscriptionDao
 import com.tracker.subscription.data.dao.SubscriptionEntity
+import com.tracker.subscription.data.dao.UserDao
+import com.tracker.subscription.data.dao.UserEntity
+import kotlinx.coroutines.flow.Flow
 
 class SubscriptionRepository(
     private val dao: SubscriptionDao,
+    private val userDao: UserDao,
     private val context: Context
 ) {
 
+     val services = listOf(
+
+        Service("Netflix", R.drawable.netflix, "com.netflix.mediaclient"),
+
+        Service("YouTube", R.drawable.youtube, "com.google.android.youtube"),
+
+        Service("Spotify", R.drawable.spotify, "com.spotify.music"),
+
+        Service("Amazon Prime", R.drawable.prime, "com.amazon.avod.thirdpartyclient"),
+
+        Service("JioHotstar", R.drawable.jiohotstar, "in.startv.hotstar"),
+
+        Service("Google One", R.drawable.google, "com.google.android.apps.subscriptions.red"),
+
+        Service("LinkedIn", R.drawable.linkedin, "com.linkedin.android"),
+
+        Service("X/Twitter", R.drawable.x, "com.twitter.android"),
+
+        Service("Cursor", R.drawable.cursor, ""), // ⚠️ no official Android app (keep empty)
+
+        Service("Photoshop", R.drawable.photoshop, "com.adobe.psmobile"),
+
+        Service("Discovery", R.drawable.discovery, "com.discovery.discoveryplus.mobile")
+    )
+
+
+    fun searchServices(query: String): List<Service> {
+        return services.filter {
+            it.name.contains(query, ignoreCase = true)
+        }
+    }
+
+    fun getAllServices(): List<Service> {
+        return services
+    }
+
+    fun getExactService(name: String): Service? {
+        return services.find {
+            it.name.equals(name, ignoreCase = true)
+        }
+    }
     fun getSubscriptions() =
         dao.getSubscriptions()
 
@@ -76,6 +123,14 @@ class SubscriptionRepository(
         dao.deleteById(id)
         WorkManager.getInstance(context)
             .cancelUniqueWork("subscription_${id}")
+    }
+
+    suspend fun getUserDetails(): UserEntity? {
+        return userDao.getUserDetails()
+    }
+
+    suspend fun saveUserDetails(userEntity: UserEntity){
+        userDao.insert(userEntity)
     }
 
 

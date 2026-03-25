@@ -10,7 +10,9 @@ data class Subscription(
     val currency: String,
     val category: String,
     val subscriptionType: String,   // NEW
-    val reminderEnabled: Boolean
+    val reminderEnabled: Boolean,
+    val logoResId: Int? = null,
+    val packageName: String? = ""
 )
 
 data class Renewal(
@@ -18,10 +20,13 @@ data class Renewal(
     val price: Double,
     val daysLeft: Int,
     val subscriptionType: String,
+    val logoResId: Int? = null,
+    val packageName: String? = null
 )
 
 data class DashboardData(
     val monthlySpend: Double,
+    val currency: String,
     val upcomingRenewals: List<Renewal>,
     val subscriptions: List<Subscription>,
     val freeTrials: List<Renewal>
