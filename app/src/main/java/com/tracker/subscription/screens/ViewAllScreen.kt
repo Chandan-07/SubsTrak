@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tracker.subscription.data.Renewal
 
@@ -41,6 +42,7 @@ import com.tracker.subscription.data.Renewal
             )
         }
     ) { padding ->
+        val context = LocalContext.current
 
         LazyColumn(
             modifier = Modifier
@@ -54,7 +56,8 @@ import com.tracker.subscription.data.Renewal
                 items(renewals) { renewal ->
 
                     RenewalItem(
-                        renewal = renewal
+                        renewal = renewal,
+                        context
                     )
 
                 }

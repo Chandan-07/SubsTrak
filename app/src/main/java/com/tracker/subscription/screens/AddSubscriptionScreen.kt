@@ -4,8 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,20 +27,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tracker.subscription.R
 import com.tracker.subscription.Utility.calculateNextBillingDate
+import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
 import com.tracker.subscription.data.db.DatabaseProvider
@@ -99,30 +111,35 @@ fun AddSubscriptionScreen(
         "Other"
     )
 
+    var serviceLogo by remember { mutableStateOf(R.drawable.netflix) }
+
+
     val context = LocalContext.current
 
     val db = DatabaseProvider.getDatabase(context)
 
 
     val repository = remember {
-        SubscriptionRepository(db.subscriptionDao(), context)
+        SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
     }
 
     val viewModel: AddSubscriptionViewModel = viewModel(
         factory = AddSubscriptionViewModelFactory(repository)
     )
     var reminderEnabled by remember { mutableStateOf(existingSubscription?.reminderEnabled ?: false) }
+    var selectedPackage by remember { mutableStateOf<String?>(null) }
+    var showSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(existingSubscription) {
 
         existingSubscription?.let {
-
             serviceName = it.name
             price = it.price.toString()
             billingCycle = it.billingCycle
             category = it.category
             startDate = it.startDate
             reminderEnabled = it.reminderEnabled
+            serviceLogo = it.logoResId!!
         }
     }
 
@@ -130,7 +147,7 @@ fun AddSubscriptionScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(color = colorResource(R.color.light_grey))
-            .padding(16.dp),
+            .padding(start = 16.dp, end = 16.dp),
     ) {
         Box{
 
@@ -173,34 +190,82 @@ fun AddSubscriptionScreen(
             modifier = Modifier.padding(top = 20.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.White
-            )
+            ),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(30.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                val interactionSource = remember { MutableInteractionSource() }
 
-                OutlinedTextField(
-                    value = serviceName,
-                    onValueChange = { serviceName = it },
-                    label = { Text("Service Name") },
-                    placeholder = { Text("e.g. Netflix, Spotify") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSheet = true }
+                ) {
 
-                        // Background inside the text field
-                        focusedContainerColor = Color(0xFFFFFFFF),
-                        unfocusedContainerColor = Color(0xFFFFFFFF),
+                    OutlinedTextField(
+                        value = serviceName,
+                        onValueChange = {},
+                        enabled = false,
+                        label = { Text("Service Name") },
+                        placeholder = { Text("e.g. Netflix, Spotify") },
 
-                        // Border colors
-                        focusedBorderColor = Color(0xFF1976D2),
-                        unfocusedBorderColor = Color(0xFFB0BEC5),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {
+                                Log.d("Sheet", "Clicked")
+                                showSheet = true
+                            },
 
-                        // Cursor
-                        cursorColor = Color(0xFF1976D2)
+                        trailingIcon = {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                        },
+
+                        leadingIcon = {
+
+                            val service = viewModel.getServiceLogo(serviceName)
+
+                            when {
+                                service != null -> {
+                                    Image(
+                                        painter = painterResource(service.logo),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                    )
+                                }
+
+                                serviceName.isNotEmpty() -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF90CAF9)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = serviceName.first().uppercase(),
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
+                                else -> {
+                                    Icon(Icons.Default.Search, contentDescription = null)
+                                }
+                            }
+                        }
                     )
-                )
+                }
+
+
+
                 DropdownField(
                     label = "Subscription Type",
                     selected = subscriptionType,
@@ -215,8 +280,6 @@ fun AddSubscriptionScreen(
                     onCurrencySelected = { currency = it }
                 )
             }
-
-
         }
 
         if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value) {
@@ -226,11 +289,12 @@ fun AddSubscriptionScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
-                )
+                ),
+                elevation = CardDefaults.cardElevation(4.dp)
             ) {
 
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(30.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 
@@ -259,11 +323,12 @@ fun AddSubscriptionScreen(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.White
-            )
+            ),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
 
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(start = 30.dp, end = 30.dp, top = 30.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
 
@@ -305,7 +370,8 @@ fun AddSubscriptionScreen(
                         )
                     ),
                     RoundedCornerShape(14.dp)
-                )
+                ),
+            contentAlignment = Alignment.BottomCenter
         ) {
 
             Button(
@@ -330,7 +396,8 @@ fun AddSubscriptionScreen(
                             currency = currency,
                             category = category,
                             reminderEnabled = reminderEnabled,
-                            subscriptionType = subscriptionType
+                            subscriptionType = subscriptionType,
+                            logoResId = serviceLogo
                         )
                         onSave(subscription)
                     }
@@ -339,7 +406,21 @@ fun AddSubscriptionScreen(
                 Text("Save Subscription", color = Color.White, fontSize = 18.sp)
             }
         }
+        ServicePickerBottomSheet(
+            show = showSheet,
+            onDismiss = { showSheet = false },
+            viewModel = viewModel,
+            onSelect = { service ->
+                serviceName = service.name
+                serviceLogo = service.logo
+                selectedPackage = service.packageName
+                showSheet = false
+            }
+        )
     }
+
+
+
     if (showDatePicker) {
 
         val datePickerState = rememberDatePickerState()
@@ -363,7 +444,159 @@ fun AddSubscriptionScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ServicePickerBottomSheet(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    viewModel: AddSubscriptionViewModel,
+    onSelect: (Service) -> Unit
+) {
 
+    if (!show) return
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = Color(0xFFFFFCFC)
+    ) {
+
+        ServicePickerContent(viewModel, onSelect)
+    }
+}
+@Composable
+fun ServicePickerContent(
+    viewModel: AddSubscriptionViewModel,
+    onSelect: (Service) -> Unit
+) {
+
+    var query by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+
+        // 🔥 drag handle
+        Box(
+            modifier = Modifier
+                .size(width = 40.dp, height = 4.dp)
+                .background(Color.Gray.copy(0.3f), RoundedCornerShape(50))
+                .align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // 🔍 search
+        OutlinedTextField(
+            value = query,
+            onValueChange = {
+                query = it
+                viewModel.searchServices(it)
+            },
+            placeholder = { Text("Search services...") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null)
+            },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 400.dp)
+        ) {
+
+            items(viewModel.suggestions) { service ->
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .clickable { onSelect(service) },
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Image(
+                            painter = painterResource(service.logo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                        )
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column {
+
+                            Text(
+                                text = service.name,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Text(
+                                text = "Subscription",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+            if (viewModel.suggestions.isEmpty() && query.isNotBlank()) {
+
+                item {
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clickable {
+                                onSelect(
+                                    Service(
+                                        name = query,
+                                        logo = -1 ,
+                                        packageName = query
+                                    )
+                                )
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+                    ) {
+
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null
+                            )
+
+                            Spacer(Modifier.width(10.dp))
+
+                            Text("Add \"$query\"")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ReminderToggle(

@@ -25,5 +25,7 @@ data class SubscriptionEntity(
 
     val nextBillingDate: Long,
 
-    val reminderEnabled: Boolean
+    val reminderEnabled: Boolean,
+
+    val logoResId: Int? = null
 )

@@ -1,11 +1,34 @@
 package com.tracker.subscription
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,13 +38,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.tracker.subscription.auth.GoogleAuthHelper
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.db.OnboardingPreference
@@ -34,7 +64,10 @@ import com.tracker.subscription.screens.AddSubscriptionScreen
 import com.tracker.subscription.screens.AuthScreen
 import com.tracker.subscription.screens.DashboardScreen
 import com.tracker.subscription.screens.OnboardingScreen
+import com.tracker.subscription.screens.SettingScreen
+import com.tracker.subscription.screens.SubscriptionScreen
 import com.tracker.subscription.screens.ViewAllScreen
+import com.tracker.subscription.ui.data.BottomNavItem
 import com.tracker.subscription.ui.theme.SubscriptionTheme
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
@@ -44,8 +77,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        enableEdgeToEdge()
-
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                scrim = Color.Transparent.toArgb(),
+                darkScrim = Color.Transparent.toArgb()
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                scrim = Color.Transparent.toArgb(),
+                darkScrim = Color.Transparent.toArgb()
+            )
+        )
+        val bottomItems = listOf(
+            BottomNavItem("dashboard", "Home", Icons.Default.Home),
+            BottomNavItem("renewals", "Subscriptions", Icons.Default.DateRange),
+            BottomNavItem("settings", "Settings", Icons.Default.AccountCircle)
+        )
+        val bottomBarRoutes = listOf(
+            "dashboard",
+            "renewals",
+            "settings"
+        )
         setContent {
 
             val context = LocalContext.current
@@ -66,6 +117,15 @@ class MainActivity : ComponentActivity() {
                 else -> "onboarding"
             }
 
+            val db = DatabaseProvider.getDatabase(context)
+
+            val repository = remember {
+                SubscriptionRepository(db.subscriptionDao(),  db.userDao(), context)
+            }
+            val viewModel: DashboardViewModel = viewModel(
+                factory = DashboardViewModelFactory(repository)
+            )
+
             if (onboardingCompleted == null || isAuthSkipped == null) {
                 Box1(
                     modifier = Modifier.fillMaxSize(),
@@ -75,14 +135,49 @@ class MainActivity : ComponentActivity() {
                 }
                 return@setContent
             }
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
 
+            Scaffold(bottomBar = {
 
-            SubscriptionTheme {
+                if (currentRoute in bottomBarRoutes) {
+                    NavigationBar(
+                        containerColor = Color.White,
 
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.navigationBars) // 👈 correct way
+                            .shadow(16.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+
+                    ) {
+                        bottomItems.forEach { item ->
+
+                            NavigationBarItem(
+                                icon = { Icon(item.icon, contentDescription = item.label) },
+                                selected = currentRoute == item.route,
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        popUpTo("dashboard")
+                                        launchSingleTop = true
+                                    }
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color(0xFF1565C0),
+                                    unselectedIconColor = Color.Gray,
+                                    indicatorColor = Color(0xFFE3F2FD) // light blue background
+                                )
+                            )
+                        }
+                    }
+                }
+
+            } ) { innerPadding ->
                 NavHost(
                     navController = navController,
                     startDestination = destination,
+                    modifier = Modifier.padding(innerPadding).padding(bottom = 0.dp, top = 0.dp)
                 ) {
+
 
                     composable("onboarding") {
 
@@ -94,10 +189,26 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("auth") {
+                        val coroutineScope = rememberCoroutineScope()
 
+                        val googleAuthClient = remember {
+                            GoogleAuthHelper(context)
+                        }
+
+                        val launcher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            if (result.resultCode == Activity.RESULT_OK) {
+                                coroutineScope.launch {
+                                    val user = googleAuthClient.signInWithIntent(result.data!!)
+                                    viewModel.setUser(user)
+                                    navController.navigate("dashboard")
+                                }
+                            }
+                        }
                         AuthScreen(
                             onGoogleSignIn = {
-                                // TODO Google login
+                                launcher.launch(googleAuthClient.getSignInIntent())
                             },
                             onSkip = {
                                 scope.launch {
@@ -134,7 +245,7 @@ class MainActivity : ComponentActivity() {
 
 
                         val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), context)
+                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
                         }
                         val viewModel: AddSubscriptionViewModel = viewModel(
                             factory = AddSubscriptionViewModelFactory(repository)
@@ -160,7 +271,8 @@ class MainActivity : ComponentActivity() {
                                         category = entity.category,
                                         startDate = entity.startDate,
                                         reminderEnabled = entity.reminderEnabled,
-                                        subscriptionType = entity.subscriptionType
+                                        subscriptionType = entity.subscriptionType,
+                                        logoId = entity.logoResId
                                     )
                                 } else {
                                     viewModel.updateSubscription(entity)
@@ -181,7 +293,7 @@ class MainActivity : ComponentActivity() {
                         val db = DatabaseProvider.getDatabase(context)
 
                         val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), context)
+                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
                         }
                         val viewModel: DashboardViewModel = viewModel(
                             factory = DashboardViewModelFactory(repository)
@@ -198,16 +310,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("view_all_free_trials") {
-                        val context = LocalContext.current
 
-                        val db = DatabaseProvider.getDatabase(context)
-
-                        val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), context)
-                        }
-                        val viewModel: DashboardViewModel = viewModel(
-                            factory = DashboardViewModelFactory(repository)
-                        )
                         val state by viewModel.uiState.collectAsState()
 
                         ViewAllScreen(
@@ -218,8 +321,18 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+
+                    composable("renewals") {
+                        SubscriptionScreen(navController)
+                    }
+
+                    composable("settings") {
+                        SettingScreen()
+                    }
+
                 }
             }
+
         }
     }
 }

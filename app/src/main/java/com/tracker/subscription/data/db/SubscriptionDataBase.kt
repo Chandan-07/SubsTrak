@@ -7,15 +7,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.tracker.subscription.data.dao.SubscriptionDao
 import com.tracker.subscription.data.dao.SubscriptionEntity
+import com.tracker.subscription.data.dao.UserDao
+import com.tracker.subscription.data.dao.UserEntity
 
 @Database(
-    entities = [SubscriptionEntity::class],
-    version = 2,
+    entities = [SubscriptionEntity::class, UserEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class SubscriptionDatabase : RoomDatabase() {
 
     abstract fun subscriptionDao(): SubscriptionDao
+
+    abstract fun userDao(): UserDao
 
     companion object {
 

@@ -1,9 +1,13 @@
 package com.tracker.subscription.presentation
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tracker.subscription.Utility.calculateNextBillingDate
+import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.dao.SubscriptionEntity
 import com.tracker.subscription.data.repo.SubscriptionRepository
@@ -14,6 +18,24 @@ class AddSubscriptionViewModel(
     private val repository: SubscriptionRepository
 ) : ViewModel() {
 
+    val allServices = repository.getAllServices() // your full list
+
+    var suggestions by mutableStateOf<List<Service>>(allServices)
+        private set
+
+    fun searchServices(query: String) {
+
+        if (query.isBlank()) {
+            suggestions = allServices   // 👈 show all by default
+            return
+        }
+
+        val q = query.lowercase().replace(" ", "")
+
+        suggestions = allServices.filter {
+            it.name.lowercase().replace(" ", "").contains(q)
+        }
+    }
     fun saveSubscription(
         name: String,
         price: Double,
@@ -22,7 +44,8 @@ class AddSubscriptionViewModel(
         category: String,
         startDate: Long,
         reminderEnabled: Boolean,
-        subscriptionType: String
+        subscriptionType: String,
+        logoId: Int?
     ) {
 
         val nextBillingDate =
@@ -37,7 +60,8 @@ class AddSubscriptionViewModel(
             startDate = startDate,
             nextBillingDate = nextBillingDate,
             reminderEnabled = reminderEnabled,
-            subscriptionType = subscriptionType
+            subscriptionType = subscriptionType,
+            logoResId = logoId
         )
 
         viewModelScope.launch {
@@ -47,6 +71,9 @@ class AddSubscriptionViewModel(
     }
 
 
+    fun getServiceLogo(name: String): Service? {
+        return repository.getExactService(name)
+    }
 
     fun updateSubscription(subscription: Subscription) {
 

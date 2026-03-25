@@ -1,6 +1,7 @@
 package com.tracker.subscription.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,8 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,6 +69,17 @@ fun OnboardingScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+//                Image(
+//                    painter = painterResource(renewal.logoResId),
+//                    contentDescription = null,
+//                    modifier = Modifier
+//                        .size(56.dp)
+//                        .clip(CircleShape)
+//                        .background(Color(0xFFF3F3F3))
+//                    ,
+//                    contentScale = ContentScale.Fit
+//                )
 
                 Text(
                     text = item.title,

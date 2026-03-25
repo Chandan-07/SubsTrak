@@ -13,6 +13,7 @@ fun SubscriptionEntity.toDomain(): Subscription {
         category = category,
         currency = currency,
         reminderEnabled = reminderEnabled,
-        subscriptionType = subscriptionType
+        subscriptionType = subscriptionType,
+        logoResId = logoResId
     )
 }

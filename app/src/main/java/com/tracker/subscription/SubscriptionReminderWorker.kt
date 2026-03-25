@@ -5,8 +5,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Log
+import androidx.compose.material3.Icon
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -55,7 +57,8 @@ class SubscriptionReminderWorker(
                 sub.name,
                 sub.price,
                 sub.subscriptionType,
-                daysLeft
+                daysLeft,
+                sub.logoResId
             )        }
         if (daysLeft < -2) return Result.success()
 
@@ -117,7 +120,8 @@ class SubscriptionReminderWorker(
         name: String,
         price: Double,
         subscriptionType: String,
-        daysLeft: Long
+        daysLeft: Long,
+        icon: Int?
     ) {
 
         val manager =
@@ -142,7 +146,7 @@ class SubscriptionReminderWorker(
 
         if (subscriptionType == SubscriptionType.FREE_TRIAL.value) {
 
-            title = "🟠 Free Trial Ending"
+            title = "Free Trial Ending"
 
             message = when (daysLeft) {
                 0L -> "$name trial ends today"
@@ -152,7 +156,7 @@ class SubscriptionReminderWorker(
 
         } else {
 
-            title = "🔴 Subscription Renewal"
+            title = "Subscription Renewal "
 
             message = when (daysLeft) {
                 0L -> "$name renews today • ₹$price"
@@ -160,6 +164,7 @@ class SubscriptionReminderWorker(
                 else -> "$name renews in $daysLeft days • ₹$price"
             }
         }
+
 
         val intent = Intent(applicationContext, MainActivity::class.java)
 
@@ -172,7 +177,13 @@ class SubscriptionReminderWorker(
 
         val notification =
             NotificationCompat.Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(icon?: R.drawable.ic_launcher)
+                .setLargeIcon(
+                    BitmapFactory.decodeResource(
+                        applicationContext.resources,
+                        icon ?: R.drawable.ic_launcher
+                    )
+                )
                 .setContentTitle(title)
                 .setContentText(message)
                 .setContentIntent(pendingIntent)
