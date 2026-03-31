@@ -31,9 +31,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
@@ -41,14 +44,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tracker.subscription.R
 import com.tracker.subscription.Utility.calculateNextBillingDate
+import com.tracker.subscription.data.Option
 import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
@@ -56,6 +66,8 @@ import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.AddSubscriptionViewModel
 import com.tracker.subscription.presentation.AddSubscriptionViewModelFactory
+import com.tracker.subscription.presentation.CommonOptions
+import com.tracker.subscription.presentation.Widgets.SingleSelectChips
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -87,29 +99,31 @@ fun AddSubscriptionScreen(
     }
     var currency by remember { mutableStateOf(existingSubscription?.currency?:"₹") }
 
-    var subscriptionType by remember { mutableStateOf(existingSubscription?.subscriptionType?: SubscriptionType.PAID_SUBSCRIPTION.value) }
+    var subscriptionType by remember { mutableStateOf(existingSubscription?.subscriptionType?: CommonOptions.subscriptionType.first().name) }
 
-    val currencyOptions = listOf("₹", "$", "€")
-
-    val billingOptions = listOf("Weekly", "Monthly", "Yearly")
+    val currencyOptions = listOf(
+        "₹", // INR
+        "$", // USD
+        "€", // EUR
+        "£", // GBP
+        "¥", // JPY / CNY
+        "₩", // KRW
+        "₽", // RUB
+        "₺", // TRY
+        "₫", // VND
+        "₱", // PHP
+        "₪", // ILS
+        "₦", // NGN
+        "₴", // UAH
+        "₡", // CRC
+        "₲"  // PYG
+    )
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val typeOptions = listOf(
-        "Paid Subscription",
-        "Free Trial"
-    )
 
-    var category by remember { mutableStateOf(existingSubscription?.category?:"Entertainment") }
-    val categoryOptions = listOf(
-        "Entertainment",
-        "Productivity",
-        "Health",
-        "Education",
-        "Work",
-        "Rental",
-        "Other"
-    )
+    var category by remember { mutableStateOf(existingSubscription?.category?:CommonOptions.categoryList.first().name) }
+
 
     var serviceLogo by remember { mutableStateOf(R.drawable.netflix) }
 
@@ -129,6 +143,7 @@ fun AddSubscriptionScreen(
     var reminderEnabled by remember { mutableStateOf(existingSubscription?.reminderEnabled ?: false) }
     var selectedPackage by remember { mutableStateOf<String?>(null) }
     var showSheet by remember { mutableStateOf(false) }
+    var buttonEnabled by remember { mutableStateOf(price.isNotEmpty()) }
 
     LaunchedEffect(existingSubscription) {
 
@@ -146,14 +161,14 @@ fun AddSubscriptionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = colorResource(R.color.light_grey))
+            .background(color = colorResource(R.color.white))
             .padding(start = 16.dp, end = 16.dp),
     ) {
         Box{
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 30.dp)
+                modifier = Modifier.padding(top = 5.dp)
             ) {
 
                 IconButton(
@@ -185,238 +200,290 @@ fun AddSubscriptionScreen(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(top = 20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(4.dp)
+        val interactionSource = remember { MutableInteractionSource() }
+        LazyColumn (
+            modifier = Modifier
+                .padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(30.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val interactionSource = remember { MutableInteractionSource() }
+            val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+            val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+            val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showSheet = true }
-                ) {
+            item {
+                Column {
+                    Text(
+                        text = "Select your Service",
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        fontFamily = manropeBold,
+                        fontSize = 18.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
 
-                    OutlinedTextField(
-                        value = serviceName,
-                        onValueChange = {},
-                        enabled = false,
-                        label = { Text("Service Name") },
-                        placeholder = { Text("e.g. Netflix, Spotify") },
-
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null
-                            ) {
-                                Log.d("Sheet", "Clicked")
-                                showSheet = true
+                            .clickable { showSheet = true }
+                    ) {
+                        OutlinedTextField(
+                            value = serviceName,
+                            onValueChange = {},
+                            enabled = false,
+                            label = { Text("Service Name") },
+                            placeholder = { Text("e.g. Netflix, Spotify") },
+
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null
+                                ) {
+                                    Log.d("Sheet", "Clicked")
+                                    showSheet = true
+                                },
+
+                            trailingIcon = {
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
                             },
 
-                        trailingIcon = {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-                        },
+                            leadingIcon = {
 
-                        leadingIcon = {
+                                val service = viewModel.getServiceLogo(serviceName)
 
-                            val service = viewModel.getServiceLogo(serviceName)
-
-                            when {
-                                service != null -> {
-                                    Image(
-                                        painter = painterResource(service.logo),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                    )
-                                }
-
-                                serviceName.isNotEmpty() -> {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF90CAF9)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = serviceName.first().uppercase(),
-                                            color = Color.White
+                                when {
+                                    service != null -> {
+                                        Image(
+                                            painter = painterResource(service.logo),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
                                         )
                                     }
-                                }
 
-                                else -> {
-                                    Icon(Icons.Default.Search, contentDescription = null)
+                                    serviceName.isNotEmpty() -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF90CAF9)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = serviceName.first().uppercase(),
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+
+                                    else -> {
+                                        Icon(Icons.Default.Search, contentDescription = null)
+                                    }
                                 }
-                            }
-                        }
-                    )
+                            },
+                            shape = RoundedCornerShape(20.dp)
+
+                        )
+                    }
                 }
 
 
+            }
 
-                DropdownField(
+
+
+            item {
+                SingleSelectChips(
                     label = "Subscription Type",
                     selected = subscriptionType,
-                    options = typeOptions,
+                    options = CommonOptions.subscriptionType,
                     onSelected = { subscriptionType = it }
                 )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
                 PriceSection(
                     price = price,
                     currency = currency,
                     currencyOptions = currencyOptions,
-                    onPriceChange = { price = it },
+                    onPriceChange = { price = it
+                        buttonEnabled = price.isNotEmpty()},
                     onCurrencySelected = { currency = it }
                 )
             }
-        }
-
-        if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value) {
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
+            item { if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value) {
 
                 Column(
-                    modifier = Modifier.padding(30.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 
-                    DropdownField(
+                    SingleSelectChips(
                         label = "Billing Cycle",
                         selected = billingCycle,
-                        options = billingOptions,
+                        options = CommonOptions.billing,
                         onSelected = { billingCycle = it }
                     )
 
-                    DropdownField(
+                    SingleSelectChips(
                         label = "Category",
                         selected = category,
-                        options = categoryOptions,
+                        options = CommonOptions.categoryList,
                         onSelected = { category = it }
                     )
                 }
+
             }
+            }
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
 
-        }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
 
-        Spacer(modifier = Modifier.height(16.dp))
+                    Text("When does the subscription start?", fontFamily = manropeBold, fontSize = 18.sp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = startDate?.let { formatDate(it) } ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
+                            colors = OutlinedTextFieldDefaults.colors(
 
-        Card(
-            modifier = Modifier,
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(4.dp)
-        ) {
+                                // Background inside the text field
+                                focusedContainerColor = Color(0xFFFFFFFF),
+                                unfocusedContainerColor = Color(0xFFFFFFFF),
 
-            Column(
-                modifier = Modifier.padding(start = 30.dp, end = 30.dp, top = 30.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+                                // Border colors
+                                focusedBorderColor = Color(0xFF1976D2),
+                                unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                                // Cursor
+                                cursorColor = Color(0xFF1976D2)
+                            ),
+                            trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("When does the billing start?", fontFamily = manropeBold, fontSize = 18.sp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = startDate?.let { formatDate(it) } ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
+                            colors = OutlinedTextFieldDefaults.colors(
+
+                                // Background inside the text field
+                                focusedContainerColor = Color(0xFFFFFFFF),
+                                unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                                // Border colors
+                                focusedBorderColor = Color(0xFF1976D2),
+                                unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                                // Cursor
+                                cursorColor = Color(0xFF1976D2)
+                            ),
+                            trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                    }
+
+//                    ReminderToggle(
+//                        enabled = reminderEnabled,
+//                        onToggle = { reminderEnabled = it }
+//                    )
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showDatePicker = true }
+                        .height(56.dp)
+                        .background(
+                            if (buttonEnabled)
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF0A3054), // blue
+                                        Color(0xFF42A5F5)  // light blue
+                                    )
+                                ) else (Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFFA1A1A1), // blue
+                                    Color(0xFF7C7A7A)  // light blue
+                                )
+                            )),
+                            RoundedCornerShape(25.dp)
+                        ),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
 
-                    val label = if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value) "Subscription Date" else "Trial Ends on"
-                    OutlinedTextField(
-                        value = startDate?.let { formatDate(it) } ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = { Text(label) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                    Button(
+                        modifier = Modifier.fillMaxSize(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent
+                        ),
+                        enabled = buttonEnabled,
+                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                        onClick = {
+                            if (serviceName.isNotEmpty() &&
+                                price.isNotEmpty() &&
+                                startDate != null
+                            ) {
 
-                ReminderToggle(
-                    enabled = reminderEnabled,
-                    onToggle = { reminderEnabled = it }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color(0xFF1976D2),
-                            Color(0xFF42A5F5)
-                        )
-                    ),
-                    RoundedCornerShape(14.dp)
-                ),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-
-            Button(
-                modifier = Modifier.fillMaxSize(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent
-                ),
-                elevation = ButtonDefaults.buttonElevation(0.dp),
-                onClick = {
-                    if (serviceName.isNotEmpty() &&
-                        price.isNotEmpty() &&
-                        startDate != null
+                                val subscription = Subscription(
+                                    id = existingSubscription?.id.toString() ?: "",
+                                    name = serviceName,
+                                    price = price.toDouble(),
+                                    billingCycle = billingCycle,
+                                    startDate = startDate,
+                                    nextBillingDate = calculateNextBillingDate(startDate, billingCycle, subscriptionType),
+                                    currency = currency,
+                                    category = category,
+                                    reminderEnabled = reminderEnabled,
+                                    subscriptionType = subscriptionType,
+                                    logoResId = serviceLogo
+                                )
+                                onSave(subscription)
+                            }
+                        }
                     ) {
-
-                        val subscription = Subscription(
-                            id = existingSubscription?.id.toString() ?: "",
-                            name = serviceName,
-                            price = price.toDouble(),
-                            billingCycle = billingCycle,
-                            startDate = startDate,
-                            nextBillingDate = calculateNextBillingDate(startDate, billingCycle, subscriptionType),
-                            currency = currency,
-                            category = category,
-                            reminderEnabled = reminderEnabled,
-                            subscriptionType = subscriptionType,
-                            logoResId = serviceLogo
-                        )
-                        onSave(subscription)
+                        Text("Create Subscription", color = Color.White, fontSize = 18.sp)
                     }
                 }
-            ) {
-                Text("Save Subscription", color = Color.White, fontSize = 18.sp)
-            }
+                ServicePickerBottomSheet(
+                    show = showSheet,
+                    onDismiss = { showSheet = false },
+                    viewModel = viewModel,
+                    onSelect = { service ->
+                        serviceName = service.name
+                        serviceLogo = service.logo
+                        selectedPackage = service.packageName
+                        showSheet = false
+                    }
+                ) }
+
         }
-        ServicePickerBottomSheet(
-            show = showSheet,
-            onDismiss = { showSheet = false },
-            viewModel = viewModel,
-            onSelect = { service ->
-                serviceName = service.name
-                serviceLogo = service.logo
-                selectedPackage = service.packageName
-                showSheet = false
-            }
-        )
+
+
+
     }
 
 
@@ -665,39 +732,62 @@ fun PriceSection(
     onPriceChange: (String) -> Unit,
     onCurrencySelected: (String) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
 
-        DropdownField(
-            label = "Currency",
-            selected = currency,
-            options = currencyOptions,
-            modifier = Modifier.width(100.dp),
-            onSelected = onCurrencySelected
+    Column {
+        Text(
+            text = "Price",
+            fontFamily = manropeBold,
+            fontSize = 18.sp
         )
-
-        OutlinedTextField(
-            value = price,
-            onValueChange = onPriceChange,
-            label = { Text("Price", color = colorResource(R.color.dark_blue)) },
-            modifier = Modifier.weight(1f),
-            colors = OutlinedTextFieldDefaults.colors(
-
-                // Background inside the text field
-                focusedContainerColor = Color(0xFFFFFFFF),
-                unfocusedContainerColor = Color(0xFFFFFFFF),
-
-                // Border colors
-                focusedBorderColor = Color(0xFF1976D2),
-                unfocusedBorderColor = Color(0xFF798181),
-
-                // Cursor
-                cursorColor = Color(0xFF1976D2)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            DropdownField(
+                label = "Currency",
+                selected = currency,
+                options = currencyOptions,
+                modifier = Modifier.width(80.dp),
+                onSelected = onCurrencySelected
             )
-        )
+
+            OutlinedTextField(
+                value = price,
+                onValueChange = onPriceChange,
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done // 👈 shows Done button
+                ),
+
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        // 👇 hide keyboard
+                        focusManager.clearFocus()
+                    }
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    // Background inside the text field
+                    focusedContainerColor = Color(0xFFFFFFFF),
+                    unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                    // Border colors
+                    focusedBorderColor = Color(0xFF1976D2),
+                    unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                    // Cursor
+                    cursorColor = Color(0xFF1976D2)
+                ),
+                placeholder = { Text("Ex 399.00", fontSize = 12.sp, color = colorResource(R.color.grey)) },
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
     }
+
 }
 
 
@@ -723,6 +813,7 @@ fun DropdownField(
 ) {
 
     var expanded by remember { mutableStateOf(false) }
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -733,7 +824,6 @@ fun DropdownField(
             value = selected,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded)
             },
@@ -752,8 +842,10 @@ fun DropdownField(
 
                 // Cursor
                 cursorColor = Color(0xFF1976D2)
-            )
+            ),
+            shape = RoundedCornerShape(20.dp)
         )
+
 
         ExposedDropdownMenu(
             expanded = expanded,
@@ -763,95 +855,7 @@ fun DropdownField(
             options.forEach {
 
                 DropdownMenuItem(
-                    text = { Text(it) },
-                    onClick = {
-                        onSelected(it)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BillingDropdown(
-    selected: String,
-    options: List<String>,
-    onSelected: (String) -> Unit
-) {
-
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-
-        OutlinedTextField(
-            value = selected,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Billing Cycle") },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-
-            options.forEach {
-
-                DropdownMenuItem(
-                    text = { Text(it) },
-                    onClick = {
-                        onSelected(it)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CategoryDropdown(
-    selected: String,
-    options: List<String>,
-    onSelected: (String) -> Unit
-) {
-
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-
-        OutlinedTextField(
-            value = selected,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Category") },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-
-            options.forEach {
-
-                DropdownMenuItem(
-                    text = { Text(it) },
+                    text = { Text(it, fontFamily = manropeRegular) },
                     onClick = {
                         onSelected(it)
                         expanded = false

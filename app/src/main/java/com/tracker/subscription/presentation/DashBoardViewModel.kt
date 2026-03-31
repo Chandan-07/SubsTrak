@@ -25,6 +25,7 @@ class DashboardViewModel(
 
     private val _uiState =
         MutableStateFlow<DashboardData?>(null)
+    val allServices = repository.getAllServices() // your full list
 
     val uiState: StateFlow<DashboardData?> = _uiState
     var currentUser by mutableStateOf<FirebaseUser?>(null)
@@ -75,7 +76,8 @@ class DashboardViewModel(
                                 price = it.price,
                                 daysLeft = getDaysLeft(it.nextBillingDate),
                                 subscriptionType = it.subscriptionType,
-                                logoResId = it.logoResId
+                                logoResId = it.logoResId,
+                                packageName = allServices.filter { filter -> it.name == filter.name }.get(0).packageName
                             )
                         }
 
