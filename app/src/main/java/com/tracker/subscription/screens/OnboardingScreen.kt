@@ -53,7 +53,7 @@ fun OnboardingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .background(colorResource(R.color.white)).padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
 
@@ -66,28 +66,25 @@ fun OnboardingScreen(
 
             Column(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-//                Image(
-//                    painter = painterResource(renewal.logoResId),
-//                    contentDescription = null,
-//                    modifier = Modifier
-//                        .size(56.dp)
-//                        .clip(CircleShape)
-//                        .background(Color(0xFFF3F3F3))
-//                    ,
-//                    contentScale = ContentScale.Fit
-//                )
+                Image(
+                    painter = painterResource(item.image),
+                    modifier = Modifier.size(250.dp).padding(top = 20.dp),
+                    contentDescription = null
+                )
 
                 Text(
                     text = item.title,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 40.dp, start = 27.dp, end = 27.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(30.dp))
 
                 Text(
                     text = item.description,
@@ -111,11 +108,11 @@ fun OnboardingScreen(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            Color(0xFF1976D2), // blue
+                            Color(0xFF0A3054), // blue
                             Color(0xFF42A5F5)  // light blue
                         )
                     ),
-                    shape = RoundedCornerShape(30.dp)
+                    shape = RoundedCornerShape(20.dp)
                 )
         ) {
             Button(
@@ -123,7 +120,7 @@ fun OnboardingScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent
                 ),
-                elevation = ButtonDefaults.buttonElevation(0.dp),
+                elevation = ButtonDefaults.buttonElevation(10.dp),
                 onClick = {
 
                     if (pagerState.currentPage == pages.lastIndex) {
@@ -147,7 +144,8 @@ fun OnboardingScreen(
                     else
                         "Next",
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
                 )
             }
         }

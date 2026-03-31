@@ -31,3 +31,13 @@ data class DashboardData(
     val subscriptions: List<Subscription>,
     val freeTrials: List<Renewal>
 )
+
+data class Category(
+    val name: String,
+    val emoji: String
+)
+
+data class Option(
+    val name: String,
+    val emoji: String
+)

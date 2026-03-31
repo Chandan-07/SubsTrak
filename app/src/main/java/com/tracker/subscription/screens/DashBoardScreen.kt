@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
@@ -50,20 +51,29 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.tracker.subscription.R
+import com.tracker.subscription.data.DashboardData
+import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.SubscriptionType
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.repo.SubscriptionRepository
@@ -81,6 +91,8 @@ fun DashboardScreen(
     val context = LocalContext.current
 
 
+
+
     val db = DatabaseProvider.getDatabase(context)
 
 
@@ -92,56 +104,66 @@ fun DashboardScreen(
         factory = DashboardViewModelFactory(repository)
     )
     val state by viewModel.uiState.collectAsState()
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
 
     Scaffold(
         floatingActionButton = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = 40.dp), // 👈 pushes down to touch navbar
-                contentAlignment = Alignment.Center
+                    , // 👈 pushes down to touch navbar
+                contentAlignment = if (state?.subscriptions?.isEmpty() == true) Alignment.Center else Alignment.BottomEnd
             ) {
 
                 Box(
                     modifier = Modifier
                         .shadow(
-                            elevation = 20.dp,
-                            shape = RoundedCornerShape(50),
+                            elevation = 10.dp,
+                            shape =if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else RoundedCornerShape(100.dp),
                             ambientColor = Color(0xFF033556),
                             spotColor = colorResource(R.color.dark_blue)
                         )
                         .background(
-                            color = colorResource(R.color.dark_blue),
-                            shape = RoundedCornerShape(50)
+                            color = colorResource(R.color.lime),
+                            shape =if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else RoundedCornerShape(100.dp),
                         )
                 ) {
 
                     ExtendedFloatingActionButton(
                         onClick = onAddSubscription,
                         containerColor = Color.Transparent,
-                        shape = RoundedCornerShape(50),
+                        shape = if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else CircleShape,
                         elevation = FloatingActionButtonDefaults.elevation(0.dp) // 👈 remove double shadow
                     ) {
 
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = Color.White
+                            tint = colorResource(R.color.dark_blue)
                         )
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                        if (state?.subscriptions?.isEmpty() == true) {
+                            Spacer(modifier = Modifier.width(6.dp))
 
-                        Text(
-                            text = "ADD SUBSCRIPTIONS",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                            Text(
+                                text = "Add Subscriptions",
+                                color = colorResource(R.color.dark_blue),
+                                fontFamily = manropeBold
+                            )
+                        }
+
                     }
                 }
             }
         },
-        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButtonPosition = if (state?.subscriptions?.isEmpty() == true) FabPosition.Center else FabPosition.End,
     ) { padding ->
+
+        val manropeSemiBold = FontFamily( Font(R.font.manrope_semi_bold) )
+        val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+        val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+        val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+        val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
         state?.let { data ->
 
@@ -196,7 +218,7 @@ fun DashboardScreen(
 //
 //                    }
                     item {
-                        MonthlySpendCard(data.currency, data.monthlySpend)
+                        MonthlySpendCard(data, data.currency, data.monthlySpend)
                     }
 
 
@@ -212,10 +234,9 @@ fun DashboardScreen(
 
                             Text(
                                 text = "Free Trials",
-                                style = MaterialTheme.typography.titleMedium,
                                 color = colorResource(R.color.dark_blue),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                fontFamily = manropeExtraBold,
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             )
@@ -225,6 +246,7 @@ fun DashboardScreen(
                                     text = "View All",
                                     color = Color.White,
                                     fontSize = 12.sp,
+                                    fontFamily = manropeRegular,
                                     modifier = Modifier.clickable {
                                         navController.navigate("view_all_free_trials")
                                     }.background(
@@ -263,10 +285,9 @@ fun DashboardScreen(
 
                                 Text(
                                     text = "Upcoming Renewals",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = manropeExtraBold,
                                     color = colorResource(R.color.dark_blue),
                                     fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
                                     modifier = Modifier
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
@@ -330,22 +351,108 @@ fun DashboardScreen(
 }
 
 @Composable
-fun MonthlySpendCard(currency: String, amount: Double) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
 
-        ,
-        elevation = CardDefaults.cardElevation(20.dp)
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
 
-    ) {
+    Column {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+
+            ,
+            elevation = CardDefaults.cardElevation(20.dp),
+            shape = RoundedCornerShape(30.dp)
+
+        ) {
 
             // 🔹 MAIN CARD
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF1A237E),
+                                Color(0xFF4866F1)
+                            )
+                        )
+                    )
+                ,
+                contentAlignment = Alignment.TopStart
+            ) {
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
+
+                    Text(
+                        text = "Good Afternoon",
+                        color = colorResource(R.color.white),
+                        fontFamily = manropeExtraBold,
+                        fontSize = 30.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row {
+                        Text(
+                        text = "${data.subscriptions.size}/5 subscriptions",
+                        color = colorResource(R.color.white),
+                        fontFamily = manropeMedium,
+                        fontSize = 16.sp
+                       )
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Text(
+                            text = "Upgrade",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontFamily = manropeMedium,
+                            modifier = Modifier.clickable {
+
+                            }.background(
+                                color = colorResource(R.color.dark_blue),
+                                shape = RoundedCornerShape(20.dp)
+                            ).border(0.5.dp, Color.White, RoundedCornerShape(20.dp)).padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                        )
+
+                    }
+
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "You have ${data.upcomingRenewals.size} Subscriptions & ${data.freeTrials.size} FreeTrials",
+                        color = colorResource(R.color.white),
+                        fontFamily = manropeMedium,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+
+                }
+            }
+
+        }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+
+            ,
+            elevation = CardDefaults.cardElevation(30.dp),
+            shape = RoundedCornerShape(30.dp)
+
+        ) {
+
+            // 🔹 MAIN CARD
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(30.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
@@ -356,28 +463,64 @@ fun MonthlySpendCard(currency: String, amount: Double) {
                         )
                     )
                 ,
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopStart
             ) {
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
+                Column(horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 20.dp)) {
 
-                    Text(
-                        text = "Monthly Spend",
-                        color = Color.Black.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            text = "Monthly Spend",
+                            color = Color.Black.copy(alpha = 0.7f),
+                            fontFamily = manropeMedium,
+                            modifier = Modifier.padding(top = 15.dp)
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(currency+ " "+ amount.toString(),
+                            fontSize = 35.sp,
+                            fontFamily = manropeBold,
+                            color = Color.Black)
+                    }
 
-                    Text(currency+ " "+ amount.toString(), style =  MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 40.sp), fontWeight = FontWeight.Bold,
-                        color = Color.Black)
+                    Spacer(modifier = Modifier.height(30.dp))
+                    Column(modifier = Modifier.fillMaxWidth().background(colorResource(R.color.white), shape = RoundedCornerShape(20.dp))
+                        .padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 10.dp)) {
+                        Row {
+                            Icon(painterResource(R.drawable.chart), "")
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "YEARLY PROJECTION",
+                                color = Color.Black.copy(alpha = 0.7f),
+                                fontFamily = manropeMedium,
+                                fontSize = 12.sp,
+                            )
+                        }
+                        Text(currency+ " "+ (amount*12).toString(), style =  MaterialTheme.typography.headlineLarge.copy(
+                            fontSize = 20.sp),
+                            fontFamily = manropeBold,
+                            color = colorResource(R.color.purple_200)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = "Based on current spending",
+                            color = Color.Black.copy(alpha = 0.7f),
+                            fontFamily = manropeMedium,
+                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+
 
                 }
             }
 
+        }
     }
+
 
 }
 fun formatCurrency(amount: Double): String {
@@ -458,128 +601,140 @@ fun FreeTrial(renewal: Renewal) {
                 }
             }
 
-            if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value){
-                Text(
-                    text = "Free",
-                    color = Color.White,
-                    modifier = Modifier
-                        .background(
-                            color = Color(0xFF8BC34A), // green
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            } else {
-                Text(formatCurrency(renewal.price))
-            }
+
 
         }
     }
 }
 @Composable
 fun RenewalItem(renewal: Renewal, context: Context) {
+    val manropeSemiBold = FontFamily( Font(R.font.manrope_semi_bold) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
+
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        elevation = CardDefaults.cardElevation(3.dp)
-
+            .padding(vertical = 10.dp, horizontal = 12.dp),
+        elevation = CardDefaults.cardElevation(3.dp),
+        shape = RoundedCornerShape(25.dp)
 
     ) {
 
-        Row(
-            modifier = Modifier
-                .background(color = colorResource(R.color.white))
-                .fillMaxWidth()
-                .padding(start = 12.dp, top = 12.dp, bottom = 20.dp, end = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+        Column(modifier = Modifier
+            .background(color = colorResource(R.color.white))
+            .fillMaxWidth()
+            .padding(start = 18.dp, top = 20.dp, bottom = 10.dp, end = 18.dp)
+
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
 
-            Row(verticalAlignment = Alignment.Top) {
+                Row(verticalAlignment = Alignment.Top) {
 
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            color = Color.White,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (renewal.logoResId != null) {
-                        Image(
-                            painter = painterResource(renewal.logoResId),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF3F3F3))
-                            ,
-                            contentScale = ContentScale.Fit
-                        )
-                    } else {
-                        Text(
-                            text = renewal.name.first().uppercase(),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(
+                                color = Color.White,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (renewal.logoResId != null) {
+                            Column {
+                                Image(
+                                    painter = painterResource(renewal.logoResId),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFF3F3F3))
+                                    ,
+                                    contentScale = ContentScale.Fit
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                            }
+
+                        } else {
+                            Text(
+                                text = renewal.name.first().uppercase(),
+                                color = Color.White,
+                                fontFamily = manropeBold
+                            )
+                        }
+
                     }
 
-                }
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                Spacer(modifier = Modifier.width(12.dp))
+                    Column {
 
-                Column {
-
-                    Row {
-                        Text(
-                            text = renewal.name,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Row {
+                            Text(
+                                text = renewal.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = 18.sp,
+                                fontFamily = manropeExtraBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value){
                             Text(
                                 text = "Free",
                                 color = Color.White,
                                 fontSize = 11.sp,
+                                fontFamily = manropeRegular,
                                 modifier = Modifier
                                     .background(
-                                        color = Color(0xFF8BC34A), // green
+                                        color = Color(0xFF388E3C), // green
                                         shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                                    ).padding(horizontal = 10.dp, vertical = 2.dp)
+                                ,
                             )
                         }
                     }
-
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Text(
-                        text = renewalText(renewal.daysLeft, renewal.subscriptionType),
-                        color = renewalColor(renewal.daysLeft),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(formatCurrency(renewal.price), style = MaterialTheme.typography.bodyMedium, color = colorResource(R.color.orrange), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(8.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(formatCurrency(renewal.price), style = MaterialTheme.typography.bodyMedium, color = colorResource(R.color.black), fontSize = 20.sp, fontFamily = manropeExtraBold)
+                    Spacer(Modifier.height(30.dp))
+                }
+
+
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    text = renewalText(renewal.daysLeft, renewal.subscriptionType),
+                    color = renewalColor(renewal.daysLeft),
+                    fontFamily = manropeMedium,
+                    textAlign = TextAlign.Left,
+                    fontSize = 12.sp
+                )
+
                 Text("Take Action", color = colorResource(R.color.blue), fontSize = 10.sp,
+                    fontFamily = manropeMedium,
                     modifier = Modifier.background(
-                        color = colorResource(R.color.light_grey),
+                        color = colorResource(R.color.white),
                         shape = RoundedCornerShape(20.dp),
-                    ).padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
+                    ).border(0.5.dp, color = colorResource(R.color.blue), RoundedCornerShape(20.dp)).padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
                         .clickable {
                             openSubscription(context, renewal)
-                    })
+                        },
+                    textAlign = TextAlign.End
+                )
             }
 
-
         }
+
     }
 }
 
@@ -587,7 +742,6 @@ fun RenewalItem(renewal: Renewal, context: Context) {
 fun openSubscription(context: Context, sub: Renewal) {
 
     val packageName = sub.packageName
-
     if (!packageName.isNullOrEmpty()) {
 
         val launchIntent = context.packageManager
@@ -662,12 +816,15 @@ fun SubscriptionItem(
     onEdit: (Subscription) -> Unit,
     onDelete: (Subscription) -> Unit
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+    var selectedSub by remember { mutableStateOf<Subscription?>(null) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(25.dp)
     ) {
 
         Row(
@@ -770,9 +927,12 @@ fun SubscriptionItem(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .border(0.8.dp,Color(0xFFECECEC), CircleShape)
+                            .border(0.8.dp, Color(0xFFECECEC), CircleShape)
                             .background(Color.White)
-                            .clickable { onDelete(sub) },
+                            .clickable {
+                                selectedSub = sub
+                                showDialog = true
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -789,6 +949,35 @@ fun SubscriptionItem(
 
         }
     }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text("Delete "+selectedSub?.name)
+            },
+            text = {
+                Text("Are you sure you want to delete this item?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedSub?.let { onDelete(it) }
+                        showDialog = false
+                    }
+                ) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDialog = false }
+                ) {
+                    Text("No")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -798,14 +987,15 @@ fun EmptySubscriptionScreen() {
         modifier = Modifier
             .fillMaxSize()
             .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(40.dp))
 
         Icon(
-            imageVector = Icons.Default.DateRange,
+           painter = painterResource(R.drawable.empty_task),
             contentDescription = null,
-            modifier = Modifier.size(80.dp)
+            tint = Color.Unspecified
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -814,7 +1004,7 @@ fun EmptySubscriptionScreen() {
             "No Subscriptions Yet",
             style = MaterialTheme.typography.titleLarge,
             color = colorResource(R.color.dark_blue),
-            fontSize = 24.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -824,7 +1014,7 @@ fun EmptySubscriptionScreen() {
             "Add your first subscription to start tracking spending.",
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Light,
+            fontWeight = FontWeight.Normal,
             modifier = Modifier.padding(start = 30.dp, end = 30.dp)
         )
     }

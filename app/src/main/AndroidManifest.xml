@@ -3,7 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
+    <queries>
+        <package android:name="com.netflix.mediaclient" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.amazon.avod.thirdpartyclient" />
+        <package android:name="in.startv.hotstar" />
+        <package android:name="com.google.android.apps.subscriptions.red" />
+        <package android:name="com.linkedin.android" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.adobe.psmobile" />
+        <package android:name="com.discovery.discoveryplus.mobile" />
+    </queries>
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

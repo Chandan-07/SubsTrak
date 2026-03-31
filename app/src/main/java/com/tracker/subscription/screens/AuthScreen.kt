@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
@@ -34,8 +36,8 @@ fun AuthScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF1C1A5B),   // deep blue
-                        Color(0xFF1C1A5B),
+                        Color(0xFFFFFFFF),
+                        Color(0xFFFFFFFF),   // deep blue
                         Color(0xFFFFFFFF),   // deep blue
                     )
                 )
@@ -44,65 +46,82 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(15.dp),
+            verticalArrangement = Arrangement.Top
         ) {
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(top = 50.dp)
             ) {
 
-                Icon(
-                    painter = painterResource(R.drawable.ic_launcher),
-                    contentDescription = "Back",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(175.dp)
+                Icon(painter = painterResource(R.drawable.header_title), contentDescription = "",
+                    tint = Color.Unspecified
                 )
-
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(30.dp))
 
                 Text(
-                    text = "Track, Manage, and Save all your subscriptions in one place",
+                    text = "SubTracker",
                     style = MaterialTheme.typography.titleLarge,
-                    color = colorResource(R.color.white),
-                    fontSize = 20.sp,
-                    modifier = Modifier.padding(start = 30.dp, end = 30.dp)
+                    color = colorResource(R.color.black),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 48.sp,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "Track, Manage, and Save all your subscriptions in one place",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorResource(R.color.black),
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(start = 40.dp, end = 40.dp)
                 )
                 Spacer(modifier = Modifier.height(20.dp))
 
 
             }
+            Spacer(modifier = Modifier.height(80.dp))
 
             Column {
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(start = 30.dp, end = 30.dp)
                         .height(56.dp)
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    Color(0xFFC73939), // blue
-                                    Color(0xFFF1A83B)  // light blue
+                                    Color(0xFF1525A8), // blue
+                                    Color(0xFFEADEDE)  // light blue
                                 )
                             ),
-                            shape = RoundedCornerShape(30.dp)
+                            shape = RoundedCornerShape(25.dp)
                         )
                 ) {
                     Button(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent
                         ),
-                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                        elevation = ButtonDefaults.buttonElevation(5.dp),
                         onClick = onGoogleSignIn,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
                     ) {
-                        Text("Continue with Google")
+                        Row {
+                            Icon(painterResource(R.drawable.google), contentDescription = "",  modifier = Modifier.size(25.dp))
+                            Spacer(Modifier.width(20.dp))
+                            Text("Continue with Google",fontSize = 18.sp, color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+
                     }
                 }
 
