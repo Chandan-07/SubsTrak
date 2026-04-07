@@ -6,17 +6,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseUser
+import com.tracker.subscription.Utility.getDaysLeft
+import com.tracker.subscription.data.AuthUser
 import com.tracker.subscription.data.DashboardData
+import com.tracker.subscription.data.ParsedSubscription
 import com.tracker.subscription.data.Renewal
+import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
+import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.dao.UserEntity
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.data.toDomain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class DashboardViewModel(
@@ -26,10 +34,24 @@ class DashboardViewModel(
     private val _uiState =
         MutableStateFlow<DashboardData?>(null)
     val allServices = repository.getAllServices() // your full list
+    var isSigningIn by mutableStateOf(false)
+        private set
+
+    fun setLoading(value: Boolean) {
+        isSigningIn = value
+    }
+
+    private val _smsSyncState =
+        MutableStateFlow<List<ParsedSubscription>>(arrayListOf())
 
     val uiState: StateFlow<DashboardData?> = _uiState
-    var currentUser by mutableStateOf<FirebaseUser?>(null)
+    val smsSyncState: StateFlow<List<ParsedSubscription>> = _smsSyncState
+    var currentUser by mutableStateOf<AuthUser?>(null)
         private set
+
+    private val _isLoadingSMS = MutableStateFlow(false)
+    val isLoadingSMS = _isLoadingSMS.asStateFlow()
+
     init {
         observeSubscriptions()
     }
@@ -53,7 +75,6 @@ class DashboardViewModel(
                 val upcomingRenewals =
                     subs.sortedBy { it.nextBillingDate }
                     .filter { it.subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value }
-                    .take(3)
                         .map {
 
                             Renewal(
@@ -61,7 +82,9 @@ class DashboardViewModel(
                                 price = it.price,
                                 daysLeft = getDaysLeft(it.nextBillingDate),
                                 subscriptionType = it.subscriptionType,
-                                logoResId = it.logoResId
+                                logoResId = it.logoResId,
+                                key = it.key,
+                                nextBillingDate = it.nextBillingDate
                             )
                         }
 
@@ -69,7 +92,6 @@ class DashboardViewModel(
 
                 val freeTrialList =
                     subs.filter { it.subscriptionType == SubscriptionType.FREE_TRIAL.value }
-                        .take(4)
                         .map {
                             Renewal(
                                 name = it.name,
@@ -77,18 +99,19 @@ class DashboardViewModel(
                                 daysLeft = getDaysLeft(it.nextBillingDate),
                                 subscriptionType = it.subscriptionType,
                                 logoResId = it.logoResId,
-                                packageName = allServices.filter { filter -> it.name == filter.name }.get(0).packageName
+                                key = it.key,
+                                packageName = allServices.filter { filter -> it.name == filter.name }.get(0).packageName,
+                                nextBillingDate = it.nextBillingDate
                             )
                         }
-
-
-                Log.d("ASFSDF", "observeSubscriptions: "+freeTrialList.size+" - "+upcomingRenewals.size+" - "+subscriptionList.size)
                 val dashboardData = DashboardData(
                     monthlySpend = monthlySpend,
                     currency = currency,
                     upcomingRenewals = upcomingRenewals,
                     subscriptions = subscriptionList,
-                    freeTrials = freeTrialList
+                    freeTrials = freeTrialList,
+                    user = getUser(),
+                    smsSuggestions = smsSyncState.value
                 )
 
                 _uiState.value = dashboardData
@@ -96,42 +119,63 @@ class DashboardViewModel(
         }
     }
 
+    fun getServiceByKey(key: String): Service? {
+        return allServices.find { it.key == key }
+    }
+    fun getFirstName(fullName: String?): String {
+        return fullName
+            ?.trim()
+            ?.split(" ")
+            ?.firstOrNull()
+            ?: "Guest"
+    }
 
 
-    fun setUser(user: FirebaseUser?) {
+    fun scanSms() {
+        viewModelScope.launch {
+
+            _isLoadingSMS.value = true
+
+            delay(100) // optional UX improvement
+
+            val smsSuggestionList = withContext(Dispatchers.IO) {
+                repository.fetchSubscriptionsFromSms()
+            }
+
+            _smsSyncState.value = smsSuggestionList
+            Log.d("IOJASID", "scanSms: "+smsSuggestionList)
+
+            _isLoadingSMS.value = false
+        }
+    }
+
+
+    fun setUser(user: AuthUser?) {
         currentUser = user
         user?.let {
             viewModelScope.launch {
-                repository.saveUserDetails(UserEntity(
-                    id = user.uid, name = user.displayName.toString(),
-                    email = user.email.toString(),
-                    phone = user.phoneNumber.toString(),
-                   ))
+                repository.saveUserDetails(
+                    UserEntity(
+                        id = user.uid,
+                        name = user.name ?: "Guest",
+                        email = user.email ?: "",
+                        logoResId = user.photo,
+                        phone = "",
+                    )
+                )
             }
         }
-
     }
 
-    fun getUser():  String{
-        var name = "Guest"
-        viewModelScope.launch {
-            repository.getUserDetails()?.name?.let {
-                name = it
-            }
+    suspend fun getUser(): AuthUser {
+
+        repository.getUserDetails()?.let {
+            return AuthUser(uid = it.id, name = it.name, email = it.email, photo = it.logoResId)
         }
-
-        return  name
+        return AuthUser(uid = "1", name = "Guest", email = "", photo = "")
     }
 
-    fun getDaysLeft(date: Long): Int {
 
-        val diff =
-            date - System.currentTimeMillis()
-
-        return TimeUnit.MILLISECONDS
-            .toDays(diff)
-            .toInt()
-    }
 
 
 

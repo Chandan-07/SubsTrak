@@ -24,16 +24,6 @@ fun AppNavigation() {
             )
         }
 
-        composable("auth") {
 
-            AuthScreen(
-                onGoogleSignIn = {
-                    // TODO Google Sign In
-                },
-                onSkip = {
-                    // Navigate to dashboard later
-                }
-            )
-        }
     }
 }

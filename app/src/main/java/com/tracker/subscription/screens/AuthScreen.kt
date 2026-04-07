@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
+    isLoading: Boolean,
     onGoogleSignIn: () -> Unit,
     onSkip: () -> Unit
 ) {
@@ -113,14 +114,27 @@ fun AuthScreen(
                             .fillMaxWidth()
                             .height(52.dp)
                     ) {
-                        Row {
-                            Icon(painterResource(R.drawable.google), contentDescription = "",  modifier = Modifier.size(25.dp))
-                            Spacer(Modifier.width(20.dp))
-                            Text("Continue with Google",fontSize = 18.sp, color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        }
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                        )}else {
+                                Row {
+                                    Icon(
+                                        painterResource(R.drawable.google),
+                                        contentDescription = "",
+                                        modifier = Modifier.size(25.dp)
+                                    )
+                                    Spacer(Modifier.width(20.dp))
+                                    Text(
+                                        "Continue with Google",
+                                        fontSize = 18.sp,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleLarge,
+                                    )
+                                }
+                            }
 
                     }
                 }

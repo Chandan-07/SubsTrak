@@ -34,7 +34,8 @@ abstract class SubscriptionDatabase : RoomDatabase() {
                     context.applicationContext,
                     SubscriptionDatabase::class.java,
                     "subscription_db"
-                ).build()
+                ).fallbackToDestructiveMigration()
+                    .build()
 
                 INSTANCE = instance
                 instance

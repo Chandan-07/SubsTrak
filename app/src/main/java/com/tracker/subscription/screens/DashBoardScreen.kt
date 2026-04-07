@@ -1,16 +1,23 @@
 package com.tracker.subscription.screens
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,9 +51,12 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,16 +80,23 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.tracker.subscription.R
+import com.tracker.subscription.Utility.formatCurrency
+import com.tracker.subscription.Utility.getDaysLeft
+import com.tracker.subscription.Utility.getGreeting
 import com.tracker.subscription.data.DashboardData
 import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.SubscriptionType
+import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.DashboardViewModelFactory
-import okhttp3.internal.wait
-import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 
 @Composable
@@ -95,64 +112,85 @@ fun DashboardScreen(
 
     val db = DatabaseProvider.getDatabase(context)
 
-
+    val smsDataSource = SmsDataSource(context)
     val repository = remember {
-        SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
+        SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
     }
 
     val viewModel: DashboardViewModel = viewModel(
         factory = DashboardViewModelFactory(repository)
     )
     val state by viewModel.uiState.collectAsState()
+    val smsState by viewModel.smsSyncState.collectAsState()
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
-
+    val isLoading by viewModel.isLoadingSMS.collectAsState()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.scanSms()
+        } else {
+            // show message
+        }
+    }
+    Log.d("ASKNMRDSA", "DashboardScreen: "+smsState.size)
     Scaffold(
         floatingActionButton = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    , // 👈 pushes down to touch navbar
-                contentAlignment = if (state?.subscriptions?.isEmpty() == true) Alignment.Center else Alignment.BottomEnd
-            ) {
+            if (state?.subscriptions?.isEmpty() == true) {
 
-                Box(
-                    modifier = Modifier
-                        .shadow(
-                            elevation = 10.dp,
-                            shape =if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else RoundedCornerShape(100.dp),
-                            ambientColor = Color(0xFF033556),
-                            spotColor = colorResource(R.color.dark_blue)
-                        )
-                        .background(
-                            color = colorResource(R.color.lime),
-                            shape =if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else RoundedCornerShape(100.dp),
-                        )
-                ) {
+                        Box(
+                            modifier = Modifier
+                                .shadow(
+                                    elevation = 10.dp,
+                                    shape = RoundedCornerShape(30),
+                                    ambientColor = Color(0xFF033556),
+                                    spotColor = colorResource(R.color.dark_blue)
+                                )
+                                .background(
+                                    color = colorResource(R.color.lime),
+                                    shape = if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(
+                                        30
+                                    ) else RoundedCornerShape(100.dp),
+                                )
+                        ) {
 
-                    ExtendedFloatingActionButton(
-                        onClick = onAddSubscription,
-                        containerColor = Color.Transparent,
-                        shape = if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(30) else CircleShape,
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp) // 👈 remove double shadow
-                    ) {
+                            ExtendedFloatingActionButton(
+                                onClick = onAddSubscription,
+                                containerColor = Color.Transparent,
+                                shape = if (state?.subscriptions?.isEmpty() == true) RoundedCornerShape(
+                                    30
+                                ) else CircleShape,
+                                elevation = FloatingActionButtonDefaults.elevation(0.dp) // 👈 remove double shadow
+                            ) {
 
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = colorResource(R.color.dark_blue)
-                        )
+                                if (state?.subscriptions?.isEmpty() == true) {
 
-                        if (state?.subscriptions?.isEmpty() == true) {
-                            Spacer(modifier = Modifier.width(6.dp))
+                                   Icon(imageVector = Icons.Default.Add,"")
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Add Subscriptions",
+                                        color = colorResource(R.color.dark_blue),
+                                        fontFamily = manropeBold
+                                    )
+                                }
 
-                            Text(
-                                text = "Add Subscriptions",
-                                color = colorResource(R.color.dark_blue),
-                                fontFamily = manropeBold
-                            )
+                            }
                         }
-
-                    }
+            } else {
+                FloatingActionButton(
+                    onClick = onAddSubscription,
+                    containerColor = Color.Transparent,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    )
+                ) {
+                    Icon(
+                        painterResource(R.drawable.fab_add),
+                        contentDescription = null,
+                        tint = Color.Unspecified
+                    )
                 }
             }
         },
@@ -165,28 +203,13 @@ fun DashboardScreen(
         val manropeBold = FontFamily( Font(R.font.manrope_bold) )
         val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
+
         state?.let { data ->
 
             if (data.subscriptions.isEmpty()) {
 
                 Box {
-//                    Row {
-//                        Text(
-//                            text = "Good Afternoon",
-//                            color = colorResource(R.color.dark_blue),
-//                            fontSize = 16.sp,
-//                            style = MaterialTheme.typography.bodyLarge
-//                        )
-//                        Text(
-//                            text = viewModel.getUser(),
-//                            color = colorResource(R.color.orrange),
-//                            fontSize = 20.sp,
-//                            style = MaterialTheme.typography.bodyLarge
-//                        )
-//                        Spacer(Modifier.height(10.dp))
-//                    }
-                    EmptySubscriptionScreen()
-
+                    EmptySubscriptionScreen(data)
                 }
 
             } else {
@@ -198,81 +221,124 @@ fun DashboardScreen(
                         .padding(padding)
                         .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 0.dp)
                 ) {
+                    item {
+                        MonthlySpendCard(data, data.currency, data.monthlySpend, navController)
+                    }
 
 //                    item {
-//                        Row {
-//                            Text(
-//                                text = "Good Afternoon",
-//                                color = colorResource(R.color.dark_blue),
-//                                fontSize = 16.sp,
-//                                style = MaterialTheme.typography.bodyLarge
-//                            )
-//                            Text(
-//                                text = viewModel.getUser(),
-//                                color = colorResource(R.color.orrange),
-//                                fontSize = 20.sp,
-//                                style = MaterialTheme.typography.bodyLarge
-//                            )
-//                            Spacer(Modifier.height(10.dp))
-//                        }
-//
-//                    }
-                    item {
-                        MonthlySpendCard(data, data.currency, data.monthlySpend)
-                    }
-
-
-                    item {
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Text(
-                                text = "Free Trials",
-                                color = colorResource(R.color.dark_blue),
-                                fontSize = 20.sp,
-                                fontFamily = manropeExtraBold,
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-
-                            if (!data.freeTrials.isEmpty() && data.freeTrials.size >2) {
-                                Text(
-                                    text = "View All",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontFamily = manropeRegular,
-                                    modifier = Modifier.clickable {
-                                        navController.navigate("view_all_free_trials")
-                                    }.background(
-                                        color = colorResource(R.color.dark_blue),
-                                        shape = RoundedCornerShape(20.dp)
-                                    ).padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
-                                )
-                            }
-
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-//                    item() {
-//                        LazyRow {
-//                            items(data.freeTrials) {
-//                                FreeTrial(it)
+//                        Column() {
+//                            Spacer(modifier = Modifier.height(16.dp))
+//                            Button(onClick = {
+////                                onScanSms()
+//                                if (ContextCompat.checkSelfPermission(
+//                                        context,
+//                                        Manifest.permission.READ_SMS
+//                                    ) == PackageManager.PERMISSION_GRANTED
+//                                ) {
+//                                    viewModel.scanSms()
+//                                } else {
+//                                    permissionLauncher.launch(Manifest.permission.READ_SMS)
+//                                }
+//                            }) {
+//                                Text("Scan SMS")
 //                            }
 //
+//                            Log.d("ASJNDA", "DashboardScreen: "+isLoading)
+//                            Log.d("ASJNDA", "DashboardScreen: "+smsState.size)
+//
+//                            if (isLoading) {
+//                                Dialog(onDismissRequest = {}) {
+//                                    Column(
+//                                        modifier = Modifier
+//                                            .clip(RoundedCornerShape(20.dp))
+//                                            .background(Color.White)
+//                                            .padding(24.dp),
+//                                        horizontalAlignment = Alignment.CenterHorizontally
+//                                    ) {
+//                                        CircularProgressIndicator()
+//                                        Spacer(modifier = Modifier.height(16.dp))
+//                                        Text("Scanning your messages...")
+//                                    }
+//                                }
+//                            } else {
+//                                if (!smsState.isEmpty()){
+//                                    LazyRow() {
+//                                        items(smsState){
+//                                            RenewalItem(Renewal(
+//                                                price = it.amount,
+//                                                name = it.service,
+//                                                nextBillingDate = it.date,
+//                                                daysLeft = getDaysLeft(it.date),
+//                                                key = it.service,
+//                                                packageName = "",
+//                                                subscriptionType = SubscriptionType.PAID_SUBSCRIPTION.name
+//                                            ), context, viewModel.getServiceByKey(it.service))
+//
+//                                        }
+//                                    }
+//                                }
+//                            }
 //                        }
 //
 //                    }
-                    items(data.freeTrials) {
-                        RenewalItem(it, context)
+
+
+
+                    if ( !data.freeTrials.isEmpty()){
+                        item {
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+
+                                Text(
+                                    text = "Free Trials",
+                                    color = colorResource(R.color.black),
+                                    fontSize = 21.sp,
+                                    fontFamily = manropeExtraBold,
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+
+
+                                if (!data.freeTrials.isEmpty() && data.freeTrials.size >2) {
+                                    Text(
+                                        text = "View All",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontFamily = manropeRegular,
+                                        modifier = Modifier
+                                            .clickable {
+                                                navController.navigate("view_all_free_trials")
+                                            }
+                                            .background(
+                                                color = colorResource(R.color.dark_blue),
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                            .padding(
+                                                start = 10.dp,
+                                                end = 10.dp,
+                                                top = 4.dp,
+                                                bottom = 4.dp
+                                            )
+                                    )
+                                }
+
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        items(data.freeTrials.take(3)) {
+                            RenewalItem(it, context, viewModel.getServiceByKey(it.key))
+                        }
                     }
+
 
                     if (!data.upcomingRenewals.isEmpty() ) {
                         item {
@@ -286,8 +352,8 @@ fun DashboardScreen(
                                 Text(
                                     text = "Upcoming Renewals",
                                     fontFamily = manropeExtraBold,
-                                    color = colorResource(R.color.dark_blue),
-                                    fontSize = 18.sp,
+                                    color = colorResource(R.color.black),
+                                    fontSize = 21.sp,
                                     modifier = Modifier
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
@@ -297,12 +363,20 @@ fun DashboardScreen(
                                         text = "View All",
                                         color = Color.White,
                                         fontSize = 12.sp,
-                                        modifier = Modifier.clickable {
-                                            navController.navigate("view_all_renewals")
-                                        }.background(
-                                            color = colorResource(R.color.dark_blue),
-                                            shape = RoundedCornerShape(20.dp)
-                                        ).padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                                        modifier = Modifier
+                                            .clickable {
+                                                navController.navigate("view_all_renewals")
+                                            }
+                                            .background(
+                                                color = colorResource(R.color.dark_blue),
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                            .padding(
+                                                start = 10.dp,
+                                                end = 10.dp,
+                                                top = 4.dp,
+                                                bottom = 4.dp
+                                            )
                                     )
                                 }
 
@@ -313,8 +387,8 @@ fun DashboardScreen(
                     }
 
 
-                    items(data.upcomingRenewals) {
-                        RenewalItem(it, context)
+                    items(data.upcomingRenewals.take(3)) {
+                        RenewalItem(it, context, viewModel.getServiceByKey(it.key))
                     }
 
 //                    item {
@@ -348,10 +422,12 @@ fun DashboardScreen(
             }
         }
     }
+
 }
 
+
 @Composable
-fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
+fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double, navController: NavController) {
 
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
@@ -386,11 +462,11 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
                 contentAlignment = Alignment.TopStart
             ) {
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                Column(horizontalAlignment = Alignment.Start,
                     modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
 
                     Text(
-                        text = "Good Afternoon",
+                        text = getGreeting() + data.user?.name,
                         color = colorResource(R.color.white),
                         fontFamily = manropeExtraBold,
                         fontSize = 30.sp
@@ -398,7 +474,8 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row {
+                    Row( modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,) {
                         Text(
                         text = "${data.subscriptions.size}/5 subscriptions",
                         color = colorResource(R.color.white),
@@ -412,12 +489,16 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
                             color = Color.White,
                             fontSize = 12.sp,
                             fontFamily = manropeMedium,
-                            modifier = Modifier.clickable {
-
-                            }.background(
-                                color = colorResource(R.color.dark_blue),
-                                shape = RoundedCornerShape(20.dp)
-                            ).border(0.5.dp, Color.White, RoundedCornerShape(20.dp)).padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                            modifier = Modifier
+                                .clickable {
+                                    navController.navigate("premium")
+                                }
+                                .background(
+                                    color = colorResource(R.color.dark_blue),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .border(0.5.dp, Color.White, RoundedCornerShape(20.dp))
+                                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
                         )
 
                     }
@@ -478,14 +559,16 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(currency+ " "+ amount.toString(),
+                        Text(formatCurrency(amount),
                             fontSize = 35.sp,
-                            fontFamily = manropeBold,
+                            fontFamily = manropeExtraBold,
                             color = Color.Black)
                     }
 
                     Spacer(modifier = Modifier.height(30.dp))
-                    Column(modifier = Modifier.fillMaxWidth().background(colorResource(R.color.white), shape = RoundedCornerShape(20.dp))
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colorResource(R.color.white), shape = RoundedCornerShape(20.dp))
                         .padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 10.dp)) {
                         Row {
                             Icon(painterResource(R.drawable.chart), "")
@@ -497,10 +580,11 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
                                 fontSize = 12.sp,
                             )
                         }
-                        Text(currency+ " "+ (amount*12).toString(), style =  MaterialTheme.typography.headlineLarge.copy(
+                        Text(
+                            formatCurrency(amount*12), style =  MaterialTheme.typography.headlineLarge.copy(
                             fontSize = 20.sp),
                             fontFamily = manropeBold,
-                            color = colorResource(R.color.purple_200)
+                            color = colorResource(R.color.dark_blue)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -519,14 +603,12 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double) {
             }
 
         }
+
     }
 
 
 }
-fun formatCurrency(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(java.util.Locale("en", "IN"))
-    return format.format(amount)
-}
+
 
 @Composable
 fun FreeTrial(renewal: Renewal) {
@@ -539,6 +621,11 @@ fun FreeTrial(renewal: Renewal) {
 
 
     ) {
+        val manropeSemiBold = FontFamily( Font(R.font.manrope_semi_bold) )
+        val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+        val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+        val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+        val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
         Row(
             modifier = Modifier
@@ -561,7 +648,8 @@ fun FreeTrial(renewal: Renewal) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (renewal.logoResId != null) {
+                    if (renewal.logoResId != null && renewal.logoResId != -1) {
+                        Log.d("ASFDKDN", "RenewalItem: "+renewal.logoResId)
                         Image(
                             painter = painterResource(renewal.logoResId),
                             contentDescription = null,
@@ -592,11 +680,18 @@ fun FreeTrial(renewal: Renewal) {
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = renewalDateText(renewal.nextBillingDate, renewal.subscriptionType),
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontFamily = manropeMedium
+                    )
 
                     Text(
-                        text = renewalText(renewal.daysLeft, renewal.subscriptionType),
+                        text = remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
                         color = renewalColor(renewal.daysLeft),
-                        style = MaterialTheme.typography.bodySmall
+                        fontSize = 12.sp,
+                        fontFamily = manropeBold
                     )
                 }
             }
@@ -606,14 +701,28 @@ fun FreeTrial(renewal: Renewal) {
         }
     }
 }
+
+
+
 @Composable
-fun RenewalItem(renewal: Renewal, context: Context) {
+fun RenewalItem(renewal: Renewal, context: Context, service: Service?) {
     val manropeSemiBold = FontFamily( Font(R.font.manrope_semi_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
+    val colors = listOf(
+        Color(0xFF90CAF9),
+        Color(0xFFA5D6A7),
+        Color(0xFFFFCC80),
+        Color(0xFFCE93D8),
+        Color(0xFFFFAB91),
+        Color(0xFF80DEEA),
+        Color(0xFFE6EE9C)
+    )
+
+    val randomColor = colors.random()
 
     Card(
         modifier = Modifier
@@ -646,10 +755,11 @@ fun RenewalItem(renewal: Renewal, context: Context) {
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (renewal.logoResId != null) {
+
+                        if (service != null) {
                             Column {
                                 Image(
-                                    painter = painterResource(renewal.logoResId),
+                                    painter = painterResource(service.logo),
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(56.dp)
@@ -663,16 +773,26 @@ fun RenewalItem(renewal: Renewal, context: Context) {
                             }
 
                         } else {
-                            Text(
-                                text = renewal.name.first().uppercase(),
-                                color = Color.White,
-                                fontFamily = manropeBold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(randomColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = renewal.name.first().uppercase(),
+                                    color = Color.White,
+                                    fontFamily = manropeBold,
+                                    fontSize = 30.sp
+                                )
+                            }
+
                         }
 
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     Column {
 
@@ -680,52 +800,99 @@ fun RenewalItem(renewal: Renewal, context: Context) {
                             Text(
                                 text = renewal.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontSize = 18.sp,
-                                fontFamily = manropeExtraBold
+                                fontSize = 20.sp,
+                                fontFamily = manropeExtraBold,
+                                modifier = Modifier.padding(end = 20.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value){
-                            Text(
-                                text = "Free",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontFamily = manropeRegular,
-                                modifier = Modifier
+
+                            Row (modifier = Modifier
+                                .background(
+                                    color = Color(0xFFFBBC05), // green
+                                    shape = RoundedCornerShape(15.dp)
+                                )
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                            ){
+                                Icon(painter = painterResource(R.drawable.glit_black),
+                                    "", modifier = Modifier.size(15.dp).padding(top = 5.dp).align(Alignment.CenterVertically))
+                                Text(
+                                    text = "Free Trial",
+                                    color = Color.Black,
+                                    fontSize = 9.sp,
+                                    fontFamily = manropeBold,
+                                    modifier = Modifier
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ,
+                                )
+                            }
+
+                        } else {
+
+                                Row (modifier = Modifier
                                     .background(
-                                        color = Color(0xFF388E3C), // green
-                                        shape = RoundedCornerShape(8.dp)
-                                    ).padding(horizontal = 10.dp, vertical = 2.dp)
-                                ,
-                            )
+                                        color = Color(0xFF1A73E8), // green
+                                        shape = RoundedCornerShape(15.dp)
+                                    )
+                                    .padding(horizontal = 3.dp, vertical = 2.dp)
+                                ){
+                                    Icon(painter = painterResource(R.drawable.container__2_), "",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(15.dp).padding(start = 2.dp, top = 3.dp, bottom = 3.dp).align(Alignment.CenterVertically))
+                                    Text(
+                                        text = "Active",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontFamily = manropeBold,
+                                        modifier = Modifier
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        ,
+                                    )
+                                }
                         }
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(formatCurrency(renewal.price), style = MaterialTheme.typography.bodyMedium, color = colorResource(R.color.black), fontSize = 20.sp, fontFamily = manropeExtraBold)
+                    Text(formatCurrency(renewal.price), style = MaterialTheme.typography.bodyMedium, color = colorResource(R.color.black), fontSize = 18.sp, fontFamily = manropeExtraBold)
                     Spacer(Modifier.height(30.dp))
                 }
 
 
             }
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = renewalDateText(renewal.nextBillingDate, renewal.subscriptionType),
+                color = colorResource(R.color.dark_grey),
+                fontSize = 12.sp,
+                fontFamily = manropeMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+
                 Text(
-                    text = renewalText(renewal.daysLeft, renewal.subscriptionType),
+                    text = remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
                     color = renewalColor(renewal.daysLeft),
-                    fontFamily = manropeMedium,
-                    textAlign = TextAlign.Left,
-                    fontSize = 12.sp
+                    fontSize = 10.sp,
+                    fontFamily = manropeBold
                 )
 
                 Text("Take Action", color = colorResource(R.color.blue), fontSize = 10.sp,
                     fontFamily = manropeMedium,
-                    modifier = Modifier.background(
-                        color = colorResource(R.color.white),
-                        shape = RoundedCornerShape(20.dp),
-                    ).border(0.5.dp, color = colorResource(R.color.blue), RoundedCornerShape(20.dp)).padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
+                    modifier = Modifier
+                        .background(
+                            color = colorResource(R.color.white),
+                            shape = RoundedCornerShape(20.dp),
+                        )
+                        .border(
+                            0.5.dp,
+                            color = colorResource(R.color.blue),
+                            RoundedCornerShape(20.dp)
+                        )
+                        .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
                         .clickable {
                             openSubscription(context, renewal)
                         },
@@ -755,13 +922,17 @@ fun openSubscription(context: Context, sub: Renewal) {
         // fallback → Play Store
         try {
             context.startActivity(
-                Intent(Intent.ACTION_VIEW,
-                    Uri.parse("market://details?id=$packageName"))
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://play.google.com/store/account/subscriptions")
+                    setPackage("com.android.vending")
+                }
             )
         } catch (e: Exception) {
             context.startActivity(
-                Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://play.google.com/store/account/subscriptions")
+                )
             )
         }
 
@@ -769,7 +940,7 @@ fun openSubscription(context: Context, sub: Renewal) {
         // fallback → Google search
         context.startActivity(
             Intent(Intent.ACTION_VIEW,
-                Uri.parse("https://www.google.com/search?q=${sub.name}"))
+                Uri.parse("https://www.google.com/search?q=${sub.name} unsubscribe"))
         )
     }
 }
@@ -787,18 +958,51 @@ fun avatarColor(name: String): Color {
     val index = abs(name.hashCode()) % colors.size
     return colors[index]
 }
-fun renewalText(daysLeft: Int, subscriptionType: String): String {
-    return when {
-        subscriptionType == SubscriptionType.FREE_TRIAL.value -> when (daysLeft) {
-            0 -> "Free trial ends today"
-            1 -> "Free trial ends tomorrow"
-            else -> "Free trial ends in ${abs(daysLeft)} days"
-        }
+fun renewalDateText(date: Long, subscriptionType: String): String {
+    val sdf = SimpleDateFormat("dd MMM", Locale.getDefault())
+    val formattedDate = sdf.format(Date(date))
 
-        daysLeft < 0 -> "Renewed ${abs(daysLeft)} days ago"
+    return if (subscriptionType == SubscriptionType.FREE_TRIAL.value) {
+        "Trial ends on $formattedDate"
+    } else {
+        "Renews on $formattedDate"
+    }
+
+}
+
+fun remainingTimeText(daysLeft: Int, subscriptionType: String): String {
+
+    val absDays = abs(daysLeft)
+
+    if (subscriptionType == SubscriptionType.FREE_TRIAL.value) {
+        return when (daysLeft) {
+            0 -> "Ends today"
+            1 -> "Ends tomorrow"
+            else -> formatDuration(absDays)
+        }
+    }
+
+    return when {
+        daysLeft < 0 -> "Renewed ${formatDuration(absDays)} ago"
         daysLeft == 0 -> "Renews today"
         daysLeft == 1 -> "Renews tomorrow"
-        else -> "Renews in $daysLeft days"
+        else -> formatDuration(daysLeft)
+    }
+}
+
+fun formatDuration(days: Int): String {
+    return when {
+        days >= 365 -> {
+            val years = days / 365
+            if (years == 1) "1 year left" else "$years years left"
+        }
+        days >= 30 -> {
+            val months = days / 30
+            if (months == 1) "1 month left" else "$months months left"
+        }
+        else -> {
+            if (days == 1) "1 day left" else "$days days left"
+        }
     }
 }
 
@@ -813,12 +1017,26 @@ fun renewalColor(daysLeft: Int): Color {
 @Composable
 fun SubscriptionItem(
     sub: Subscription,
+    service: Service?,
     onEdit: (Subscription) -> Unit,
     onDelete: (Subscription) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var selectedSub by remember { mutableStateOf<Subscription?>(null) }
+    val colors = listOf(
+        Color(0xFF90CAF9),
+        Color(0xFFA5D6A7),
+        Color(0xFFFFCC80),
+        Color(0xFFCE93D8),
+        Color(0xFFFFAB91),
+        Color(0xFF80DEEA),
+        Color(0xFFE6EE9C)
+    )
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
+    val randomColor = colors.random()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -831,7 +1049,7 @@ fun SubscriptionItem(
             modifier = Modifier
                 .background(color = colorResource(R.color.white))
                 .fillMaxWidth()
-                .padding( top = 16.dp, bottom = 12.dp)
+                .padding(top = 16.dp, bottom = 12.dp)
 
         ,
             verticalAlignment = Alignment.CenterVertically,
@@ -852,23 +1070,32 @@ fun SubscriptionItem(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (sub.logoResId != null) {
+                        if (service != null) {
                             Image(
-                                painter = painterResource(sub.logoResId),
+                                painter = painterResource(service.logo),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFFF3F3F3))
                                     .padding(2.dp),
                                 contentScale = ContentScale.Fit
                             )
                         } else {
-                            Text(
-                                text = sub.name.first().uppercase(),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(randomColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = sub.name.first().uppercase(),
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontFamily = manropeBold
+                                )
+                            }
                         }
 
                     }
@@ -876,8 +1103,8 @@ fun SubscriptionItem(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         sub.name,
-                        style = MaterialTheme.typography.titleMedium,
                         color = colorResource(R.color.blue_text),
+                        fontFamily = manropeBold,
                         modifier = Modifier.padding(top = 10.dp)
                     )
                 }
@@ -888,7 +1115,8 @@ fun SubscriptionItem(
 
                 Text(
                     "Next: ${formatDate(sub.nextBillingDate)}",
-                    style = MaterialTheme.typography.bodySmall,
+                   fontFamily = manropeRegular,
+                    fontSize = 12.sp,
                     modifier = Modifier.padding(start = 12.dp)
                 )
             }
@@ -899,7 +1127,10 @@ fun SubscriptionItem(
                     text = formatCurrency(sub.price),
                     color = colorResource(R.color.blue_text),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.End).padding(end = 16.dp)
+                    fontFamily = manropeMedium,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 16.dp)
                 )
 
                 Row(modifier = Modifier.padding(top = 16.dp)) {
@@ -908,7 +1139,7 @@ fun SubscriptionItem(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .border(0.8.dp,Color(0xFFECECEC), CircleShape)
+                            .border(0.8.dp, Color(0xFFECECEC), CircleShape)
                             .background(Color.White)
                             .clickable { onEdit(sub) },
                         contentAlignment = Alignment.Center
@@ -981,7 +1212,11 @@ fun SubscriptionItem(
 }
 
 @Composable
-fun EmptySubscriptionScreen() {
+fun EmptySubscriptionScreen(data: DashboardData) {
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
 
     Column(
         modifier = Modifier
@@ -990,12 +1225,99 @@ fun EmptySubscriptionScreen() {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+
+            ,
+            elevation = CardDefaults.cardElevation(20.dp),
+            shape = RoundedCornerShape(30.dp)
+
+        ) {
+
+            // 🔹 MAIN CARD
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF1A237E),
+                                Color(0xFF4866F1)
+                            )
+                        )
+                    )
+                ,
+                contentAlignment = Alignment.TopStart
+            ) {
+
+                Column(horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
+
+                    Text(
+                        text = getGreeting() + data.user?.name,
+                        color = colorResource(R.color.white),
+                        fontFamily = manropeExtraBold,
+                        fontSize = 30.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row( modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,) {
+                        Text(
+                            text = "${data.subscriptions.size}/5 subscriptions",
+                            color = colorResource(R.color.white),
+                            fontFamily = manropeMedium,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Text(
+                            text = "Upgrade",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontFamily = manropeMedium,
+                            modifier = Modifier
+                                .clickable {
+
+                                }
+                                .background(
+                                    color = colorResource(R.color.dark_blue),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .border(0.5.dp, Color.White, RoundedCornerShape(20.dp))
+                                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                        )
+
+                    }
+
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "You have ${data.upcomingRenewals.size} Subscriptions & ${data.freeTrials.size} FreeTrials",
+                        color = colorResource(R.color.white),
+                        fontFamily = manropeMedium,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+
+                }
+            }
+
+        }
+        Spacer(modifier = Modifier.height(30.dp))
 
         Icon(
            painter = painterResource(R.drawable.empty_task),
             contentDescription = null,
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
+            modifier = Modifier
+                .width(200.dp)
+                .height(120.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1004,7 +1326,7 @@ fun EmptySubscriptionScreen() {
             "No Subscriptions Yet",
             style = MaterialTheme.typography.titleLarge,
             color = colorResource(R.color.dark_blue),
-            fontSize = 30.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -1015,6 +1337,7 @@ fun EmptySubscriptionScreen() {
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
             modifier = Modifier.padding(start = 30.dp, end = 30.dp)
         )
     }

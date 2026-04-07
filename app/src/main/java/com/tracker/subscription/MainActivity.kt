@@ -1,7 +1,10 @@
 package com.tracker.subscription
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,11 +12,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,14 +27,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,10 +51,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -51,8 +68,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.firebase.auth.FirebaseAuth
+import com.tracker.subscription.Utility.calculateNextBillingDate
 import com.tracker.subscription.auth.GoogleAuthHelper
 import com.tracker.subscription.data.Subscription
+import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.db.OnboardingPreference
 import com.tracker.subscription.data.repo.SubscriptionRepository
@@ -64,15 +84,16 @@ import com.tracker.subscription.screens.AddSubscriptionScreen
 import com.tracker.subscription.screens.AuthScreen
 import com.tracker.subscription.screens.DashboardScreen
 import com.tracker.subscription.screens.OnboardingScreen
-import com.tracker.subscription.screens.SettingScreen
+import com.tracker.subscription.screens.PremiumPlanScreen
+import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
 import com.tracker.subscription.screens.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
-import com.tracker.subscription.ui.theme.SubscriptionTheme
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
 
 class MainActivity : ComponentActivity() {
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,14 +109,14 @@ class MainActivity : ComponentActivity() {
             )
         )
         val bottomItems = listOf(
-            BottomNavItem("dashboard", "Home", Icons.Default.Home),
-            BottomNavItem("renewals", "Subscriptions", Icons.Default.DateRange),
-            BottomNavItem("settings", "Settings", Icons.Default.AccountCircle)
+            BottomNavItem("dashboard", "Home", R.drawable.home),
+            BottomNavItem("renewals", "Subscriptions", R.drawable.container),
+            BottomNavItem("profile", "Profile", R.drawable.profile)
         )
         val bottomBarRoutes = listOf(
             "dashboard",
             "renewals",
-            "settings"
+            "profile"
         )
         setContent {
 
@@ -109,18 +130,21 @@ class MainActivity : ComponentActivity() {
                 .isAuthSkipped(context)
                 .collectAsState(initial = null)
 
+
             val navController = rememberNavController()
             val scope = rememberCoroutineScope()
-            val destination = when{
-                isAuthSkipped == true -> "dashboard"
+            val firebaseUser = FirebaseAuth.getInstance().currentUser
+            val destination = when {
+                firebaseUser != null -> "dashboard"
                 onboardingCompleted == true -> "auth"
                 else -> "onboarding"
             }
 
             val db = DatabaseProvider.getDatabase(context)
 
+            val smsDataSource = SmsDataSource(context)
             val repository = remember {
-                SubscriptionRepository(db.subscriptionDao(),  db.userDao(), context)
+                SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
             }
             val viewModel: DashboardViewModel = viewModel(
                 factory = DashboardViewModelFactory(repository)
@@ -153,7 +177,7 @@ class MainActivity : ComponentActivity() {
                         bottomItems.forEach { item ->
 
                             NavigationBarItem(
-                                icon = { Icon(item.icon, contentDescription = item.label) },
+                                icon = { Icon(painter = painterResource( item.icon), contentDescription = item.label) },
                                 selected = currentRoute == item.route,
                                 onClick = {
                                     navController.navigate(item.route) {
@@ -175,7 +199,9 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                     navController = navController,
                     startDestination = destination,
-                    modifier = Modifier.padding(innerPadding).padding(bottom = 0.dp, top = 0.dp)
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .padding(bottom = 0.dp, top = 0.dp)
                 ) {
 
 
@@ -189,7 +215,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("auth") {
+
                         val coroutineScope = rememberCoroutineScope()
+                        val isLoading = viewModel.isSigningIn
 
                         val googleAuthClient = remember {
                             GoogleAuthHelper(context)
@@ -198,25 +226,55 @@ class MainActivity : ComponentActivity() {
                         val launcher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
+
                             if (result.resultCode == Activity.RESULT_OK) {
+
                                 coroutineScope.launch {
-                                    val user = googleAuthClient.signInWithIntent(result.data!!)
-                                    viewModel.setUser(user)
-                                    navController.navigate("dashboard")
+                                    viewModel.setLoading(true)
+
+                                    try {
+                                        val user = googleAuthClient.signInWithIntent(result.data!!)
+                                        viewModel.setUser(user)
+                                        navController.navigate("dashboard")
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    } finally {
+                                        viewModel.setLoading(false)
+                                    }
                                 }
                             }
                         }
-                        AuthScreen(
-                            onGoogleSignIn = {
-                                launcher.launch(googleAuthClient.getSignInIntent())
-                            },
-                            onSkip = {
-                                scope.launch {
-                                    OnboardingPreference.setAuthSkipped(context)
+
+                        Box1 {
+                            AuthScreen(
+                                isLoading = isLoading,
+                                onGoogleSignIn = {
+                                    if (!isLoading) {
+                                        launcher.launch(googleAuthClient.getSignInIntent())
+                                    }
+                                },
+                                onSkip = {
+                                    if (!isLoading) {
+                                        scope.launch {
+                                            OnboardingPreference.setAuthSkipped(context)
+                                        }
+                                        navController.navigate("dashboard")
+                                    }
                                 }
-                                navController.navigate("dashboard")
+                            )
+
+                            // 🔥 Full screen loader (optional but premium)
+                            if (isLoading) {
+                                Box1(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
-                        )
+                        }
                     }
                     composable("dashboard") {
 
@@ -227,6 +285,8 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+
+
 
                     composable(
                         route = "add_subscription?id={id}",
@@ -244,8 +304,9 @@ class MainActivity : ComponentActivity() {
                         val db = DatabaseProvider.getDatabase(context)
 
 
+                        val smsDataSource = SmsDataSource(context)
                         val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
+                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
                         }
                         val viewModel: AddSubscriptionViewModel = viewModel(
                             factory = AddSubscriptionViewModelFactory(repository)
@@ -272,13 +333,14 @@ class MainActivity : ComponentActivity() {
                                         startDate = entity.startDate,
                                         reminderEnabled = entity.reminderEnabled,
                                         subscriptionType = entity.subscriptionType,
-                                        logoId = entity.logoResId
+                                        logoId = entity.logoResId,
+                                        key = entity.key
                                     )
                                 } else {
                                     viewModel.updateSubscription(entity)
                                 }
 
-                                navController.popBackStack()
+                               navController.popBackStack()
                             }
                             ,
                             onBack = {
@@ -292,8 +354,9 @@ class MainActivity : ComponentActivity() {
 
                         val db = DatabaseProvider.getDatabase(context)
 
+                        val smsDataSource = SmsDataSource(context)
                         val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context)
+                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
                         }
                         val viewModel: DashboardViewModel = viewModel(
                             factory = DashboardViewModelFactory(repository)
@@ -305,7 +368,8 @@ class MainActivity : ComponentActivity() {
                             renewals = state?.upcomingRenewals,
                             onBack = {
                                 navController.popBackStack()
-                            }
+                            },
+                            viewModel
                         )
                     }
 
@@ -314,11 +378,12 @@ class MainActivity : ComponentActivity() {
                         val state by viewModel.uiState.collectAsState()
 
                         ViewAllScreen(
-                            title = "Upcoming Renewals",
+                            title = "Free Trials",
                             renewals = state?.freeTrials,
                             onBack = {
                                 navController.popBackStack()
-                            }
+                            },
+                            viewModel
                         )
                     }
 
@@ -326,11 +391,24 @@ class MainActivity : ComponentActivity() {
                         SubscriptionScreen(navController)
                     }
 
-                    composable("settings") {
-                        SettingScreen()
+                    composable("premium") {
+                        PremiumPlanScreen(onClose = {
+                            navController.popBackStack()
+                        }, onContinue = {
+                            navController.navigate("dashboard")
+                        })
                     }
 
+                    composable("profile") {
+                        val state by viewModel.uiState.collectAsState()
+                        ProfileScreen(state?.user){
+
+                        }
+                    }
+
+
                 }
+
             }
 
         }
