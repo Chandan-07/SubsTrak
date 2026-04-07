@@ -28,15 +28,10 @@ class SubscriptionReminderWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-            Log.d("REMINDER", "Worker triggered")
         val id = inputData.getInt("id", -1)
-        Log.d("REMINDER", "id "+ id)
-
         val dao = SubscriptionDatabase
             .getDatabase(applicationContext)
             .subscriptionDao()
-        Log.d("REMINDER", "dao.getSubscription(id)"+ dao.getSubscription(id))
-
         val sub = dao.getSubscription(id) ?: return Result.success()
 
         val today = Calendar.getInstance().apply {
@@ -65,15 +60,12 @@ class SubscriptionReminderWorker(
         if (daysLeft > 0) {
 
             // keep checking tomorrow
-            Log.d("ASJKBNDJ", "doWork: "+daysLeft+ sub.subscriptionType)
             scheduleTomorrow(id)
 
         } else {
 
             // trial should not repeat
             if (sub.subscriptionType == SubscriptionType.FREE_TRIAL.value) {
-                Log.d("ASJKBNDJ", "free trial: "+sub.subscriptionType)
-
                 return Result.success()
 
             }

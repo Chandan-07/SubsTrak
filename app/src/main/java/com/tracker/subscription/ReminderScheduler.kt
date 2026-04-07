@@ -22,7 +22,6 @@ object ReminderScheduler {
 
         val delay = max(0, reminderTime - System.currentTimeMillis())
 
-        Log.d("JAKJSN", "scheduleReminder: "+delay)
         val request =
             OneTimeWorkRequestBuilder<SubscriptionReminderWorker>()
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS)

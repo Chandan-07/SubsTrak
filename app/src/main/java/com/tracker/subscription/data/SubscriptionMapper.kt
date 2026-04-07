@@ -4,6 +4,7 @@ import com.tracker.subscription.data.dao.SubscriptionEntity
 
 fun SubscriptionEntity.toDomain(): Subscription {
     return Subscription(
+        key = key,
         id = id.toString(),
         name = name,
         price = price,

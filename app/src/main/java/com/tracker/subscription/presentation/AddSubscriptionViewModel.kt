@@ -1,6 +1,5 @@
 package com.tracker.subscription.presentation
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -45,7 +44,8 @@ class AddSubscriptionViewModel(
         startDate: Long,
         reminderEnabled: Boolean,
         subscriptionType: String,
-        logoId: Int?
+        logoId: Int?,
+        key: String
     ) {
 
         val nextBillingDate =
@@ -61,12 +61,21 @@ class AddSubscriptionViewModel(
             nextBillingDate = nextBillingDate,
             reminderEnabled = reminderEnabled,
             subscriptionType = subscriptionType,
-            logoResId = logoId
+            logoResId = logoId,
+            key = key
         )
 
         viewModelScope.launch {
 
             repository.addSubscription(subscription)
+        }
+    }
+
+    fun filterByCategory(category: String) {
+        suggestions = if (category == "All") {
+            allServices
+        } else {
+            allServices.filter { it.category == category }
         }
     }
 
@@ -97,14 +106,14 @@ class AddSubscriptionViewModel(
             startDate = subscription.startDate,
             nextBillingDate = nextBillingDate,
             reminderEnabled = subscription.reminderEnabled,
-            subscriptionType = subscription.subscriptionType
+            subscriptionType = subscription.subscriptionType,
+            logoResId = subscription.logoResId,
+            key = subscription.key
         )
     }
 
 
     suspend fun getSubscription(id: Int): Subscription? {
-        Log.d("ASDNKJS", "getSubscription: "+repository
-            .getSubscription(id))
         return repository
             .getSubscription(id)
             ?.toDomain()
