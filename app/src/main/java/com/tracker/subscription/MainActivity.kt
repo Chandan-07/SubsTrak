@@ -1,45 +1,33 @@
 package com.tracker.subscription
 
-import android.Manifest
 import android.app.Activity
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,18 +37,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -69,25 +52,27 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
-import com.tracker.subscription.Utility.calculateNextBillingDate
 import com.tracker.subscription.auth.GoogleAuthHelper
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.db.OnboardingPreference
+import com.tracker.subscription.data.repo.BillingRepository
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.AddSubscriptionViewModel
 import com.tracker.subscription.presentation.AddSubscriptionViewModelFactory
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.presentation.DashboardViewModelFactory
-import com.tracker.subscription.screens.AddSubscriptionScreen
-import com.tracker.subscription.screens.AuthScreen
-import com.tracker.subscription.screens.DashboardScreen
-import com.tracker.subscription.screens.OnboardingScreen
+import com.tracker.subscription.presentation.PremiumViewModel
+import com.tracker.subscription.presentation.PremiumViewModelFactory
+import com.tracker.subscription.screens.addSub.AddSubscriptionScreen
+import com.tracker.subscription.screens.onboard.AuthScreen
+import com.tracker.subscription.screens.home.DashboardScreen
+import com.tracker.subscription.screens.onboard.OnboardingScreen
 import com.tracker.subscription.screens.PremiumPlanScreen
 import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
-import com.tracker.subscription.screens.ViewAllScreen
+import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
@@ -129,6 +114,10 @@ class MainActivity : ComponentActivity() {
             val isAuthSkipped by OnboardingPreference
                 .isAuthSkipped(context)
                 .collectAsState(initial = null)
+
+            val isLoggedIn by OnboardingPreference
+                .isLoggedIn(context)
+                .collectAsState(initial = false)
 
 
             val navController = rememberNavController()
@@ -200,8 +189,12 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     startDestination = destination,
                     modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(bottom = 0.dp, top = 0.dp)
+                        .padding(
+                            start = innerPadding.calculateStartPadding(LayoutDirection.Ltr),
+                            end = innerPadding.calculateEndPadding(LayoutDirection.Ltr),
+                            bottom = innerPadding.calculateBottomPadding()
+                            // 👇 REMOVE top padding
+                        )
                 ) {
 
 
@@ -226,15 +219,18 @@ class MainActivity : ComponentActivity() {
                         val launcher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
-
+                            viewModel.setLoading(true)
                             if (result.resultCode == Activity.RESULT_OK) {
 
                                 coroutineScope.launch {
-                                    viewModel.setLoading(true)
 
                                     try {
                                         val user = googleAuthClient.signInWithIntent(result.data!!)
                                         viewModel.setUser(user)
+                                        scope.launch {
+                                            OnboardingPreference.setLoggedIn(context, true)
+                                            viewModel.setLoggedIn(true)
+                                        }
                                         navController.navigate("dashboard")
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -277,11 +273,18 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("dashboard") {
+                        val state by viewModel.uiState.collectAsState()
 
                         DashboardScreen(
+                            isLoggedIn,
                             navController = navController,
                             onAddSubscription = {
-                                navController.navigate("add_subscription")
+                                if(state?.subscriptions?.size == 5){
+                                    navController.navigate("premium")
+                                } else{
+                                    navController.navigate("add_subscription")
+
+                                }
                             }
                         )
                     }
@@ -349,7 +352,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("view_all_renewals") {
+                    composable(route="view_all_renewals",
+                        enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
                         val context = LocalContext.current
 
                         val db = DatabaseProvider.getDatabase(context)
@@ -369,7 +378,8 @@ class MainActivity : ComponentActivity() {
                             onBack = {
                                 navController.popBackStack()
                             },
-                            viewModel
+                            viewModel,
+                            navController
                         )
                     }
 
@@ -383,27 +393,91 @@ class MainActivity : ComponentActivity() {
                             onBack = {
                                 navController.popBackStack()
                             },
-                            viewModel
+                            viewModel,
+                            navController
                         )
                     }
 
-                    composable("renewals") {
-                        SubscriptionScreen(navController)
+                    composable("renewals", enterTransition = {
+                        fadeIn(animationSpec = tween(300))
+                    },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
+                        SubscriptionScreen(isLoggedIn, navController)
                     }
 
                     composable("premium") {
-                        PremiumPlanScreen(onClose = {
+                        val context = LocalContext.current
+
+                        val db = DatabaseProvider.getDatabase(context)
+
+
+                        val premiumRepository = remember {
+                            BillingRepository( context, db.userDao())
+                        }
+                        val premiumViewModel: PremiumViewModel = viewModel(
+                            factory = PremiumViewModelFactory(premiumRepository)
+                        )
+                        PremiumPlanScreen(viewModel = premiumViewModel, onClose = {
                             navController.popBackStack()
-                        }, onContinue = {
-                            navController.navigate("dashboard")
                         })
                     }
 
-                    composable("profile") {
-                        val state by viewModel.uiState.collectAsState()
-                        ProfileScreen(state?.user){
+                    composable("profile", enterTransition = {
+                        fadeIn(animationSpec = tween(300))
+                    },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
 
+                        val isLoading = viewModel.isSigningIn
+                        val coroutineScope = rememberCoroutineScope()
+
+                        val googleAuthClient = remember {
+                            GoogleAuthHelper(context)
                         }
+                        val state by viewModel.uiState.collectAsState()
+                        if (isLoggedIn){
+                            ProfileScreen(
+                                state?.user,
+                                onSignOut = {
+                                    viewModel.setLoading(true)
+
+                                    coroutineScope.launch {
+                                        try {
+                                            googleAuthClient.signOut()
+                                            FirebaseAuth.getInstance().signOut()
+                                            OnboardingPreference.setLoggedIn(context, false)
+                                            viewModel.setLoggedIn(false)
+                                            navController.navigate("auth") {
+                                                popUpTo(0)
+                                            }
+
+                                        } catch (e: Exception) {
+
+                                            // 🔥 Show error
+                                            Toast.makeText(
+                                                context,
+                                                "Something went wrong. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+
+                                        } finally {
+                                            Toast.makeText(
+                                                context,
+                                                "Something went wrong. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            viewModel.setLoading(false) // ✅ always stop loading
+                                        }
+                                    }
+                                }
+                            )
+                        } else {
+                            navController.navigate("auth")
+                        }
+
                     }
 
 

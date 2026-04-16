@@ -1,8 +1,9 @@
-package com.tracker.subscription.screens
+package com.tracker.subscription.screens.addSub
 
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,14 +41,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -62,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tracker.subscription.R
+import com.tracker.subscription.Utility
 import com.tracker.subscription.Utility.calculateNextBillingDate
 import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
@@ -73,7 +76,6 @@ import com.tracker.subscription.presentation.AddSubscriptionViewModel
 import com.tracker.subscription.presentation.AddSubscriptionViewModelFactory
 import com.tracker.subscription.presentation.CommonOptions
 import com.tracker.subscription.presentation.Widgets.BillingChips
-import com.tracker.subscription.presentation.Widgets.SingleSelectChips
 import com.tracker.subscription.presentation.Widgets.SubTypeChip
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -175,7 +177,7 @@ fun AddSubscriptionScreen(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 5.dp)
+                modifier = Modifier.padding(top = 50.dp)
             ) {
 
                 IconButton(
@@ -254,7 +256,7 @@ fun AddSubscriptionScreen(
                     currency = currency,
                     currencyOptions = currencyOptions,
                     onPriceChange = { price = it
-                        buttonEnabled = price.isNotEmpty()},
+                       },
                     onCurrencySelected = { currency = it }
                 )
             }
@@ -368,7 +370,7 @@ fun AddSubscriptionScreen(
                 Spacer(modifier = Modifier.height(30.dp))
 
                 ServicePickerBottomSheet(
-                    show = showSheet,
+                    show = showSheet && existingSubscription == null,
                     onDismiss = { showSheet = false },
                     viewModel = viewModel,
                     onSelect = { service ->
@@ -402,7 +404,6 @@ fun AddSubscriptionScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent
                 ),
-                enabled = buttonEnabled,
                 elevation = ButtonDefaults.buttonElevation(0.dp),
                 onClick = {
                     if (serviceName.isNotEmpty() &&
@@ -425,6 +426,13 @@ fun AddSubscriptionScreen(
                             key = key
                         )
                         onSave(subscription)
+                    } else {
+                        if (price.isEmpty()) {
+                            Toast.makeText(context, "Please enter the Price", Toast.LENGTH_SHORT).show()
+                        } else if ( serviceName.isEmpty()){
+                            Toast.makeText(context, "Please select the Service", Toast.LENGTH_SHORT).show()
+
+                        }
                     }
                 }
             ) {
@@ -514,7 +522,7 @@ fun SelectedServiceCard(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background( if (logoRes != null) Color.White else Color.Gray) , // fallback bg
+                    .background( if (logoRes != null) Color.White else Utility.randomColor()) , // fallback bg
                 contentAlignment = Alignment.Center
             ) {
                 if (logoRes != null) {
@@ -525,10 +533,10 @@ fun SelectedServiceCard(
                     )
                 } else {
                     Text(
-                        text = serviceName.take(1),
+                        text = serviceName.take(1).uppercase(),
                         color = Color.White,
                         fontFamily = manropeBold,
-                        fontSize = 20.sp
+                        fontSize = 30.sp
                     )
                 }
             }
@@ -620,21 +628,30 @@ fun ServicePickerContent(
         Spacer(Modifier.height(20.dp))
 
         // 🔍 Search
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                viewModel.searchServices(it)
-            },
-            placeholder = { Text("Search services...", fontFamily = manropeRegular) },
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = null)
-            },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-        )
+            OutlinedTextField(
+                value = query,
+                onValueChange = {
+                    query = it
+                    viewModel.searchServices(it)
+                },
+                placeholder = { Text("Search services...", fontFamily = manropeRegular) },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+            )
 
         Spacer(Modifier.height(12.dp))
+            val haptic = LocalHapticFeedback.current
 
         // 🧩 Category chips
         LazyRow {
@@ -642,6 +659,7 @@ fun ServicePickerContent(
                 FilterChip(
                     selected = selectedCategory == category,
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                         selectedCategory = category
                         viewModel.filterByCategory(category)
                     },
@@ -661,7 +679,7 @@ fun ServicePickerContent(
 
         // 🔥 GRID (key improvement)
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(3),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -669,7 +687,9 @@ fun ServicePickerContent(
             items(viewModel.suggestions) { service ->
 
                 Card(
-                    onClick = { onSelect(service) },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                        onSelect(service) },
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = colorResource(R.color.light_grey)
@@ -687,7 +707,7 @@ fun ServicePickerContent(
 
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFFF1F3F4)),
                             contentAlignment = Alignment.Center
@@ -695,7 +715,7 @@ fun ServicePickerContent(
                             Image(
                                 painter = painterResource(service.logo),
                                 contentDescription = null,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                         }
 
@@ -706,7 +726,7 @@ fun ServicePickerContent(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             fontFamily = manropeRegular,
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             textAlign = TextAlign.Center // 👈 CENTER TEXT
                         )
                     }

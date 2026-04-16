@@ -32,4 +32,7 @@ interface SubscriptionDao {
 
     @Query("UPDATE subscriptions SET nextBillingDate = :nextDate WHERE id = :id")
     suspend fun updateNextBillingDate(id: Int, nextDate: Long)
+
+    @Query("DELETE FROM subscriptions")
+    suspend fun deleteAll()
 }

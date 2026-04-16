@@ -11,5 +11,6 @@ data class UserEntity(
     val name: String,
     val phone: String,
     val email: String,
-    val logoResId: String? = null
+    val logoResId: String? = null,
+    val isUserPremium: Boolean = false
 )

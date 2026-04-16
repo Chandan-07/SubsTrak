@@ -1,5 +1,6 @@
 package com.tracker.subscription.screens
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,18 +42,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
+import com.tracker.subscription.presentation.PremiumViewModel
 
 
 @Composable
 fun PremiumPlanScreen(
-    onClose: () -> Unit,
-    onContinue: () -> Unit
-) {
-    var selectedPlan by remember { mutableStateOf("Yearly") }
+    viewModel: PremiumViewModel,
+    onClose: () -> Unit
+){
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
+    val plans = viewModel.plans
+    val selectedPlan = viewModel.selectedPlan
+    val context = LocalContext.current
+    val activity = context as Activity
 
+    LaunchedEffect(Unit) {
+        viewModel.loadPlans()
+    }
     Box (
 
         modifier = Modifier
@@ -92,23 +102,22 @@ fun PremiumPlanScreen(
             )
 
             Spacer(modifier = Modifier.height(20.dp))
+            if (plans.isNotEmpty()){
+                plans.forEach { plan ->
 
-            // 💳 Plans
-            PlanCard(
-                title = "Yearly",
-                price = "₹899",
-                isSelected = selectedPlan == "Yearly",
-                tag = "SAVE 25%"
-            ) { selectedPlan = "Yearly" }
+                    PlanCard(
+                        title = plan.title,
+                        price = plan.price, // 🔥 dynamic price
+                        subText = if (!plan.isYearly) "per month • Billed monthly" else null,
+                        isSelected = selectedPlan == plan,
+                        tag = if (plan.isYearly) "SAVE 23%" else null
+                    ) {
+                        viewModel.selectedPlan = plan
+                    }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            PlanCard(
-                title = "Monthly",
-                price = "₹99",
-                subText = "per month • Billed monthly",
-                isSelected = selectedPlan == "Monthly"
-            ) { selectedPlan = "Monthly" }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -122,7 +131,9 @@ fun PremiumPlanScreen(
 
             // 🚀 Continue Button
             Button(
-                onClick = onContinue,
+                onClick = {
+                    viewModel.purchase(activity)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

@@ -1,5 +1,7 @@
 package com.tracker.subscription.data
 
+import com.android.billingclient.api.ProductDetails
+
 data class Service(
     val key: String,        // 👈 NEW (stable)
     val name: String,
@@ -24,4 +26,11 @@ data class ParsedSubscription(
 data class Sms(
     val body: String,
     val date: Long
+)
+
+data class PlanUi(
+    val title: String,
+    val productDetails: ProductDetails,
+    val price: String,
+    val isYearly: Boolean
 )

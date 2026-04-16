@@ -1,4 +1,4 @@
-package com.tracker.subscription.screens
+package com.tracker.subscription.screens.onboard
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -27,10 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,10 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier,
     onGetStarted: () -> Unit
 ) {
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
@@ -72,14 +77,14 @@ fun OnboardingScreen(
 
                 Image(
                     painter = painterResource(item.image),
-                    modifier = Modifier.size(250.dp).padding(top = 20.dp),
+                    modifier = Modifier.size(250.dp).padding(top = 40.dp),
                     contentDescription = null
                 )
 
                 Text(
                     text = item.title,
                     fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily = manropeExtraBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 40.dp, start = 27.dp, end = 27.dp)
                 )
@@ -89,6 +94,7 @@ fun OnboardingScreen(
                 Text(
                     text = item.description,
                     fontSize = 18.sp,
+                    fontFamily = manropeMedium,
                     textAlign = TextAlign.Center
                 )
             }
@@ -104,11 +110,11 @@ fun OnboardingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(65.dp)
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            Color(0xFF0A3054), // blue
+                            Color(0xFF2979FF), // blue
                             Color(0xFF42A5F5)  // light blue
                         )
                     ),
@@ -144,7 +150,7 @@ fun OnboardingScreen(
                     else
                         "Next",
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily = manropeExtraBold,
                     fontSize = 20.sp
                 )
             }

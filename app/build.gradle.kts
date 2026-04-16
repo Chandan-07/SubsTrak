@@ -14,8 +14,8 @@ android {
         applicationId = "com.tracker.subscription"
         minSdk = 24
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.0.14"
+        versionCode = 19
+        versionName = "1.0.19"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,6 +41,10 @@ android {
     }
     kapt {
         correctErrorTypes = true
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 }
 
@@ -108,4 +112,6 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.android.gms:play-services-auth")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation ("com.android.billingclient:billing-ktx:6.1.0")
+
 }

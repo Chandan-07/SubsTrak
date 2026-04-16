@@ -40,7 +40,17 @@ class DashboardViewModel(
     fun setLoading(value: Boolean) {
         isSigningIn = value
     }
+    private val _isLoggedIn = MutableStateFlow(false)
+    val isLoggedIn = _isLoggedIn.asStateFlow()
 
+    fun setLoggedIn(value: Boolean) {
+        _isLoggedIn.value = value
+        if (!value){
+            viewModelScope.launch {
+                repository.deleteSubData()
+            }
+        }
+    }
     private val _smsSyncState =
         MutableStateFlow<List<ParsedSubscription>>(arrayListOf())
 
@@ -71,6 +81,8 @@ class DashboardViewModel(
                if(subs.isNotEmpty()) {
                    currency = subs[0].currency
                }
+                Log.d("sdgdsg", "observeSubscriptions: "+currency)
+
 
                 val upcomingRenewals =
                     subs.sortedBy { it.nextBillingDate }
@@ -78,15 +90,18 @@ class DashboardViewModel(
                         .map {
 
                             Renewal(
+                                id = it.id.toString(),
                                 name = it.name,
                                 price = it.price,
                                 daysLeft = getDaysLeft(it.nextBillingDate),
                                 subscriptionType = it.subscriptionType,
                                 logoResId = it.logoResId,
                                 key = it.key,
+                                currency = it.currency,
                                 nextBillingDate = it.nextBillingDate
                             )
                         }
+                Log.d("sdgdsg", "observeSubscriptions: "+currency)
 
                 val subscriptionList = subs.map { it.toDomain() }
 
@@ -94,12 +109,14 @@ class DashboardViewModel(
                     subs.filter { it.subscriptionType == SubscriptionType.FREE_TRIAL.value }
                         .map {
                             Renewal(
+                                id = it.id.toString(),
                                 name = it.name,
                                 price = it.price,
                                 daysLeft = getDaysLeft(it.nextBillingDate),
                                 subscriptionType = it.subscriptionType,
                                 logoResId = it.logoResId,
                                 key = it.key,
+                                currency = it.currency,
                                 packageName = allServices.filter { filter -> it.name == filter.name }.get(0).packageName,
                                 nextBillingDate = it.nextBillingDate
                             )
@@ -111,8 +128,10 @@ class DashboardViewModel(
                     subscriptions = subscriptionList,
                     freeTrials = freeTrialList,
                     user = getUser(),
-                    smsSuggestions = smsSyncState.value
+                    smsSuggestions = smsSyncState.value,
+                    isLoggedIn = isLoggedIn.value
                 )
+                Log.d("IUYTF", "observeSubscriptions: "+ dashboardData.currency)
 
                 _uiState.value = dashboardData
             }
@@ -154,15 +173,28 @@ class DashboardViewModel(
         currentUser = user
         user?.let {
             viewModelScope.launch {
-                repository.saveUserDetails(
-                    UserEntity(
-                        id = user.uid,
-                        name = user.name ?: "Guest",
-                        email = user.email ?: "",
-                        logoResId = user.photo,
-                        phone = "",
+                if (isLoggedIn.value){
+                    repository.saveUserDetails(
+                        UserEntity(
+                            id ="34567",
+                            name =  "Guest",
+                            email =  "",
+                            logoResId = "",
+                            phone = "",
+                        )
                     )
-                )
+                } else{
+                    repository.saveUserDetails(
+                        UserEntity(
+                            id = user.uid,
+                            name = user.name ?: "Guest",
+                            email = user.email ?: "",
+                            logoResId = user.photo,
+                            phone = "",
+                        )
+                    )
+                }
+
             }
         }
     }
@@ -178,12 +210,11 @@ class DashboardViewModel(
 
 
 
-
-    fun deleteSubscription(subscription: Subscription) {
+    fun deleteSubscription(id: String) {
 
         viewModelScope.launch {
 
-            repository.deleteSubscription(subscription.id.toInt())
+            repository.deleteSubscription(id.toInt())
         }
     }
 }

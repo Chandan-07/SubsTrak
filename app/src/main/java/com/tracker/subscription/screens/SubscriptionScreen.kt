@@ -1,6 +1,8 @@
 package com.tracker.subscription.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -13,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
@@ -27,9 +30,12 @@ import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.presentation.DashboardViewModelFactory
+import com.tracker.subscription.screens.home.EmptySubscriptionScreen
+import com.tracker.subscription.screens.home.cards.SubscriptionItem
 
 @Composable
 fun SubscriptionScreen(
+    isLoggedIn:Boolean,
     navController: NavController,
     onAddSubscription: () -> Unit = {}
 ){
@@ -51,48 +57,53 @@ fun SubscriptionScreen(
 
     val state by viewModel.uiState.collectAsState()
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
-    state?.let { data ->
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 25.dp).background(Color(0xFFF5F6FA))) {
 
-        if (data.subscriptions.isEmpty()) {
+        state?.let { data ->
 
-            Box {
-                EmptySubscriptionScreen(data)
-            }
+            if (data.subscriptions.isEmpty()) {
 
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp)) {
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "My Subscriptions",
-                        color = colorResource(R.color.dark_blue),
-                        fontSize = 20.sp,
-                        fontFamily = manropeBold,
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                Box {
+                    EmptySubscriptionScreen(navController,isLoggedIn, data)
                 }
 
-                items(data.subscriptions) { sub ->
+            } else {
+                Spacer(modifier = Modifier.height(50.dp))
+                Text(
+                    "My Subscriptions",
+                    color = colorResource(R.color.dark_blue),
+                    fontSize = 24.sp,
+                    fontFamily = manropeExtraBold,
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn() {
+                    items(data.subscriptions) { sub ->
 
-                    SubscriptionItem(
-                        sub = sub,
-                        viewModel.getServiceByKey(sub.key),
-                        onEdit = { subscription ->
-                            navController.navigate("add_subscription?id=${subscription.id}")
-                        },
-                        onDelete = { subscription ->
-                            viewModel.deleteSubscription(subscription)
-                        }
-                    )
+                        SubscriptionItem(
+                            sub = sub,
+                            viewModel.getServiceByKey(sub.key),
+                            onEdit = { subscription ->
+                                navController.navigate("add_subscription?id=${subscription.id}")
+                            },
+                            onDelete = { subscription ->
+                                viewModel.deleteSubscription(subscription.id)
+                            }
+                        )
+                    }
+
                 }
-
             }
         }
+
+
+
     }
+
 
 }

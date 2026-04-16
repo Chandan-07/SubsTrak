@@ -1,28 +1,22 @@
-package com.tracker.subscription.screens
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+package com.tracker.subscription.screens.onboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
-import com.tracker.subscription.auth.GoogleAuthHelper
-import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
@@ -31,6 +25,10 @@ fun AuthScreen(
     onSkip: () -> Unit
 ) {
 
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
     Box(
         modifier = Modifier
@@ -65,9 +63,8 @@ fun AuthScreen(
 
                 Text(
                     text = "SubTracker",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colorResource(R.color.black),
-                    fontWeight = FontWeight.Bold,
+                    color = colorResource(R.color.blue),
+                    fontFamily = manropeExtraBold,
                     textAlign = TextAlign.Center,
                     fontSize = 48.sp,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp)
@@ -75,9 +72,9 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = "Track, Manage, and Save all your subscriptions in one place",
-                    style = MaterialTheme.typography.bodyMedium,
                     color = colorResource(R.color.black),
-                    fontSize = 18.sp,
+                    fontSize = 14.sp,
+                    fontFamily = manropeMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(start = 40.dp, end = 40.dp)
                 )
@@ -97,8 +94,8 @@ fun AuthScreen(
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    Color(0xFF1525A8), // blue
-                                    Color(0xFFEADEDE)  // light blue
+                                    Color(0xFFFF4081), // blue
+                                    Color(0xFFCCFF90)  // light blue
                                 )
                             ),
                             shape = RoundedCornerShape(25.dp)
@@ -130,8 +127,7 @@ fun AuthScreen(
                                         "Continue with Google",
                                         fontSize = 18.sp,
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        fontFamily = manropeExtraBold
                                     )
                                 }
                             }
@@ -146,7 +142,8 @@ fun AuthScreen(
                     onClick = onSkip,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
-                    Text("Skip for now",color = colorResource(R.color.dark_blue), fontSize = 16.sp)
+                    Text("Skip for now",color = colorResource(R.color.dark_blue),
+                        fontFamily = manropeBold, fontSize = 16.sp)
                 }
             }
         }

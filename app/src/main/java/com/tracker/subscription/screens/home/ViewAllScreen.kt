@@ -1,4 +1,4 @@
-package com.tracker.subscription.screens
+package com.tracker.subscription.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,15 +11,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,9 +24,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.tracker.subscription.R
 import com.tracker.subscription.data.Renewal
 import com.tracker.subscription.presentation.DashboardViewModel
+import com.tracker.subscription.screens.home.cards.RenewalItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +36,8 @@ import com.tracker.subscription.presentation.DashboardViewModel
     title: String,
     renewals: List<Renewal>?,
     onBack: () -> Unit,
-    viewModel: DashboardViewModel
+    viewModel: DashboardViewModel,
+    navController: NavController
 ) {
 
     val context = LocalContext.current
@@ -45,9 +45,10 @@ import com.tracker.subscription.presentation.DashboardViewModel
     Column {
         Box{
 
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 5.dp)
+                modifier = Modifier.padding(top = 56.dp)
             ) {
 
                 IconButton(
@@ -87,8 +88,12 @@ import com.tracker.subscription.presentation.DashboardViewModel
                     RenewalItem(
                         renewal = renewal,
                         context,
-                        viewModel.getServiceByKey(renewal.key)
-                    )
+                        viewModel.getServiceByKey(renewal.key), onEdit = { subscription ->
+                            navController.navigate("add_subscription?id=${subscription.id}")
+
+                        }, onDelete = { subscription ->
+                            viewModel.deleteSubscription(subscription.id)
+                        })
 
                 }
             }

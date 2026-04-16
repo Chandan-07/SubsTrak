@@ -246,5 +246,9 @@ class SubscriptionRepository(
         userDao.insert(userEntity)
     }
 
+    suspend fun deleteSubData(){
+        dao.deleteAll()
+    }
+
 
 }
