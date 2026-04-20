@@ -19,10 +19,12 @@ data class Subscription(
 )
 
 data class Renewal(
+    val id: String,
     val key: String,
     val name: String,
     val price: Double,
     val daysLeft: Int,
+    val currency: String,
     val subscriptionType: String,
     val logoResId: Int? = null,
     val nextBillingDate: Long,
@@ -36,6 +38,7 @@ data class DashboardData(
     val subscriptions: List<Subscription>,
     val freeTrials: List<Renewal>,
     val user : AuthUser? = null,
+    val isLoggedIn: Boolean = false,
     val smsSuggestions: List<ParsedSubscription> = emptyList()
 )
 

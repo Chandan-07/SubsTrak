@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -112,6 +114,7 @@ fun BillingChips(
     isEmojiShow: Boolean = false,
     onSelected: (String) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     Column(modifier = modifier) {
@@ -119,7 +122,7 @@ fun BillingChips(
         Text(
             text = label,
             modifier = Modifier.padding(bottom = 8.dp),
-            fontFamily = manropeExtraBold,
+            fontFamily = manropeBold,
             fontSize = 18.sp
         )
         Spacer(Modifier.height(8.dp))
@@ -143,7 +146,9 @@ fun BillingChips(
 
                 Box(
                     modifier = Modifier
-                        .clickable { onSelected(option.name) }
+                        .clickable { onSelected(option.name)
+                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                        }
                         .padding(horizontal = 2.dp, vertical = 8.dp)
                 ) {
                     Row(modifier = Modifier .clip(RoundedCornerShape(50))
@@ -175,14 +180,15 @@ fun SubTypeChip(
     isEmojiShow: Boolean = false,
     onSelected: (String) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     Column(modifier = modifier) {
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             text = label,
             modifier = Modifier.padding(bottom = 8.dp),
-            fontFamily = manropeExtraBold,
+            fontFamily = manropeBold,
             fontSize = 18.sp
         )
         Spacer(Modifier.height(8.dp))
@@ -196,7 +202,9 @@ fun SubTypeChip(
                         Box(
                             modifier = Modifier
                                 .weight(1f) // 🔥 KEY LINE (equal width)
-                                .clickable { onSelected(option.name) }
+                                .clickable { onSelected(option.name)
+                                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                }
                                 .clip(RoundedCornerShape(50))
                                 .border(
                                     width = 1.dp,

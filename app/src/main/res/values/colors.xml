@@ -13,9 +13,11 @@
     <color name="light_grey">#F2F3F6</color>
     <color name="grey">#D2D2D7</color>
     <color name="dark_grey">#79797C</color>
+    <color name="text_grey">#B7B7BC</color>
     <color name="blue_bg_light">#DDF1FB</color>
     <color name="dark_blue">#053192</color>
     <color name="lime">#E5E106</color>
     <color name="orrange">#FF9800</color>
     <color name="orange">#FF5722</color>
+    <color name="red">#F50057</color>
 </resources>

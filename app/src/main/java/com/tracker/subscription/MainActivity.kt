@@ -1,45 +1,39 @@
 package com.tracker.subscription
 
-import android.Manifest
 import android.app.Activity
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,18 +43,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -69,25 +58,28 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
-import com.tracker.subscription.Utility.calculateNextBillingDate
 import com.tracker.subscription.auth.GoogleAuthHelper
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.db.DatabaseProvider
 import com.tracker.subscription.data.db.OnboardingPreference
+import com.tracker.subscription.data.repo.BillingRepository
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.presentation.AddSubscriptionViewModel
 import com.tracker.subscription.presentation.AddSubscriptionViewModelFactory
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.presentation.DashboardViewModelFactory
-import com.tracker.subscription.screens.AddSubscriptionScreen
-import com.tracker.subscription.screens.AuthScreen
-import com.tracker.subscription.screens.DashboardScreen
-import com.tracker.subscription.screens.OnboardingScreen
+import com.tracker.subscription.presentation.PremiumViewModel
+import com.tracker.subscription.presentation.PremiumViewModelFactory
+import com.tracker.subscription.screens.addSub.AddSubscriptionScreen
+import com.tracker.subscription.screens.onboard.AuthScreen
+import com.tracker.subscription.screens.home.DashboardScreen
+import com.tracker.subscription.screens.onboard.OnboardingScreen
 import com.tracker.subscription.screens.PremiumPlanScreen
 import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
-import com.tracker.subscription.screens.ViewAllScreen
+import com.tracker.subscription.screens.home.DashboardUiState
+import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
@@ -130,6 +122,10 @@ class MainActivity : ComponentActivity() {
                 .isAuthSkipped(context)
                 .collectAsState(initial = null)
 
+            val isLoggedIn by OnboardingPreference
+                .isLoggedIn(context)
+                .collectAsState(initial = false)
+
 
             val navController = rememberNavController()
             val scope = rememberCoroutineScope()
@@ -163,45 +159,61 @@ class MainActivity : ComponentActivity() {
             val currentRoute = navBackStackEntry?.destination?.route
 
             Scaffold(bottomBar = {
-
-                if (currentRoute in bottomBarRoutes) {
+                AnimatedVisibility(
+                    visible = currentRoute in bottomBarRoutes,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
+                ) {
                     NavigationBar(
                         containerColor = Color.White,
-
                         modifier = Modifier
                             .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.navigationBars) // 👈 correct way
-                            .shadow(16.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .shadow(
+                                16.dp,
+                                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                            )
                     ) {
                         bottomItems.forEach { item ->
-
                             NavigationBarItem(
-                                icon = { Icon(painter = painterResource( item.icon), contentDescription = item.label) },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(item.icon),
+                                        contentDescription = item.label
+                                    )
+                                },
                                 selected = currentRoute == item.route,
                                 onClick = {
                                     navController.navigate(item.route) {
                                         popUpTo("dashboard")
                                         launchSingleTop = true
+                                        restoreState = true   // 👈 important
                                     }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Color(0xFF1565C0),
                                     unselectedIconColor = Color.Gray,
-                                    indicatorColor = Color(0xFFE3F2FD) // light blue background
+                                    indicatorColor = Color(0xFFE3F2FD)
                                 )
                             )
                         }
                     }
                 }
+            }) { innerPadding ->
 
-            } ) { innerPadding ->
-                NavHost(
+                val bottomPadding by animateDpAsState(
+                    targetValue = if (currentRoute in bottomBarRoutes) 80.dp else 20.dp,
+                    label = ""
+                )
+                    NavHost(
                     navController = navController,
                     startDestination = destination,
                     modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(bottom = 0.dp, top = 0.dp)
+                        .padding(
+                            start = innerPadding.calculateStartPadding(LayoutDirection.Ltr),
+                            end = innerPadding.calculateEndPadding(LayoutDirection.Ltr),
+                            bottom = bottomPadding
+                        )
                 ) {
 
 
@@ -226,15 +238,18 @@ class MainActivity : ComponentActivity() {
                         val launcher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
-
+                            viewModel.setLoading(true)
                             if (result.resultCode == Activity.RESULT_OK) {
 
                                 coroutineScope.launch {
-                                    viewModel.setLoading(true)
 
                                     try {
                                         val user = googleAuthClient.signInWithIntent(result.data!!)
                                         viewModel.setUser(user)
+                                        scope.launch {
+                                            OnboardingPreference.setLoggedIn(context, true)
+                                            viewModel.setLoggedIn(true)
+                                        }
                                         navController.navigate("dashboard")
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -277,11 +292,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("dashboard") {
+                        val state by viewModel.uiState.collectAsState()
 
                         DashboardScreen(
+                            isLoggedIn,
                             navController = navController,
                             onAddSubscription = {
-                                navController.navigate("add_subscription")
+
+                                val subsCount = (state as? DashboardUiState.Success)
+                                    ?.data
+                                    ?.subscriptions
+                                    ?.size ?: 0
+
+                                if (subsCount == 5) {
+                                    navController.navigate("premium")
+                                } else {
+                                    navController.navigate("add_subscription")
+                                }
                             }
                         )
                     }
@@ -295,27 +322,24 @@ class MainActivity : ComponentActivity() {
                                 type = NavType.IntType
                                 defaultValue = -1
                             }
-                        )
+                        ), enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }
                     ) { backStackEntry ->
 
                         val id = backStackEntry.arguments?.getInt("id")
-                        val context = LocalContext.current
 
-                        val db = DatabaseProvider.getDatabase(context)
-
-
-                        val smsDataSource = SmsDataSource(context)
-                        val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
-                        }
-                        val viewModel: AddSubscriptionViewModel = viewModel(
+                        val addSubViewModel: AddSubscriptionViewModel = viewModel(
                             factory = AddSubscriptionViewModelFactory(repository)
                         )
                         var subscription by remember { mutableStateOf<Subscription?>(null) }
 
                         LaunchedEffect(id) {
                             if (id != -1) {
-                                subscription = viewModel.getSubscription(id!!)
+                                subscription = addSubViewModel.getSubscription(id!!)
                             }
                         }
 
@@ -324,7 +348,7 @@ class MainActivity : ComponentActivity() {
                             onSave = { entity ->
 
                                 if (id == -1) {
-                                    viewModel.saveSubscription(
+                                    addSubViewModel.saveSubscription(
                                         name = entity.name,
                                         price = entity.price,
                                         currency = entity.currency,
@@ -337,7 +361,7 @@ class MainActivity : ComponentActivity() {
                                         key = entity.key
                                     )
                                 } else {
-                                    viewModel.updateSubscription(entity)
+                                    addSubViewModel.updateSubscription(entity)
                                 }
 
                                navController.popBackStack()
@@ -349,61 +373,141 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("view_all_renewals") {
+                    composable(route="view_all_renewals",
+                        enterTransition = {
+                            slideInHorizontally { it }
+                        },
+                        exitTransition = {
+                           slideOutHorizontally { it }
+                        }) {
+                        val state by viewModel.uiState.collectAsState()
+
+                        val renewals = (state as? DashboardUiState.Success)
+                            ?.data
+                            ?.upcomingRenewals ?: emptyList()
+
+                        ViewAllScreen(
+                            title = "Upcoming Renewals",
+                            renewals = renewals,
+                            onBack = {
+                                navController.popBackStack()
+                            },
+                            viewModel,
+                            navController
+                        )
+                    }
+
+                    composable("view_all_free_trials",enterTransition = {
+                        slideInHorizontally { it }
+                    },
+                        exitTransition = {
+                            slideOutHorizontally { it }
+                        }) {
+
+                        val state by viewModel.uiState.collectAsState()
+
+                        val freeTrials = (state as? DashboardUiState.Success)
+                            ?.data
+                            ?.freeTrials ?: emptyList()
+
+                        ViewAllScreen(
+                            title = "Free Trials",
+                            renewals = freeTrials,
+                            onBack = {
+                                navController.popBackStack()
+                            },
+                            viewModel,
+                            navController
+                        )
+                    }
+
+                    composable("renewals", enterTransition = {
+                        fadeIn(animationSpec = tween(300))
+                    },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
+                        SubscriptionScreen(isLoggedIn, navController)
+                    }
+
+                    composable("premium",enterTransition = {
+                        slideInHorizontally { it }
+                    },
+                        exitTransition = {
+                            slideOutHorizontally { it }
+                        }) {
                         val context = LocalContext.current
 
                         val db = DatabaseProvider.getDatabase(context)
 
-                        val smsDataSource = SmsDataSource(context)
-                        val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
+
+                        val premiumRepository = remember {
+                            BillingRepository( context, db.userDao())
                         }
-                        val viewModel: DashboardViewModel = viewModel(
-                            factory = DashboardViewModelFactory(repository)
+                        val premiumViewModel: PremiumViewModel = viewModel(
+                            factory = PremiumViewModelFactory(premiumRepository)
                         )
-                        val state by viewModel.uiState.collectAsState()
-
-                        ViewAllScreen(
-                            title = "Upcoming Renewals",
-                            renewals = state?.upcomingRenewals,
-                            onBack = {
-                                navController.popBackStack()
-                            },
-                            viewModel
-                        )
-                    }
-
-                    composable("view_all_free_trials") {
-
-                        val state by viewModel.uiState.collectAsState()
-
-                        ViewAllScreen(
-                            title = "Free Trials",
-                            renewals = state?.freeTrials,
-                            onBack = {
-                                navController.popBackStack()
-                            },
-                            viewModel
-                        )
-                    }
-
-                    composable("renewals") {
-                        SubscriptionScreen(navController)
-                    }
-
-                    composable("premium") {
-                        PremiumPlanScreen(onClose = {
+                        PremiumPlanScreen(viewModel = premiumViewModel, onClose = {
                             navController.popBackStack()
-                        }, onContinue = {
-                            navController.navigate("dashboard")
                         })
                     }
 
-                    composable("profile") {
-                        val state by viewModel.uiState.collectAsState()
-                        ProfileScreen(state?.user){
+                    composable("profile", enterTransition = {
+                        fadeIn(animationSpec = tween(300))
+                    },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
 
+                        val isLoading = viewModel.isSigningIn
+                        val coroutineScope = rememberCoroutineScope()
+
+                        val googleAuthClient = remember {
+                            GoogleAuthHelper(context)
                         }
+                        val state by viewModel.uiState.collectAsState()
+                        val user = if (isLoggedIn) {
+                            (state as? DashboardUiState.Success)?.data?.user
+                        } else null
+                            ProfileScreen(
+                                user = user,
+                                onSignOut = {
+                                    viewModel.setLoading(true)
+
+                                    coroutineScope.launch {
+                                        try {
+                                            googleAuthClient.signOut()
+                                            FirebaseAuth.getInstance().signOut()
+                                            OnboardingPreference.setLoggedIn(context, false)
+                                            viewModel.setLoggedIn(false)
+                                            navController.navigate("auth") {
+                                                popUpTo(0)
+                                            }
+
+                                        } catch (e: Exception) {
+
+                                            // 🔥 Show error
+                                            Toast.makeText(
+                                                context,
+                                                "Something went wrong. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+
+                                        } finally {
+                                            Toast.makeText(
+                                                context,
+                                                "Something went wrong. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            viewModel.setLoading(false) // ✅ always stop loading
+                                        }
+                                    }
+                                },
+                                onLogin = {
+                                    navController.navigate("auth")
+                                }
+                            )
+
                     }
 
 

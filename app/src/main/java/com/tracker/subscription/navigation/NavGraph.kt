@@ -2,8 +2,7 @@ package com.tracker.subscription.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.*
-import com.tracker.subscription.screens.AuthScreen
-import com.tracker.subscription.screens.OnboardingScreen
+import com.tracker.subscription.screens.onboard.OnboardingScreen
 
 @Composable
 fun AppNavigation() {

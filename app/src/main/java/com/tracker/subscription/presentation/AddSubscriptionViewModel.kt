@@ -1,5 +1,6 @@
 package com.tracker.subscription.presentation
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,6 +23,16 @@ class AddSubscriptionViewModel(
     var suggestions by mutableStateOf<List<Service>>(allServices)
         private set
 
+    var selectedService by mutableStateOf<Service?>(null)
+        private set
+
+    fun selectService(service: Service) {
+        selectedService = service
+    }
+
+    fun clearSelectedService() {
+        selectedService = null
+    }
     fun searchServices(query: String) {
 
         if (query.isBlank()) {
@@ -48,6 +59,7 @@ class AddSubscriptionViewModel(
         key: String
     ) {
 
+        Log.d("ASFAS", "saveSubscription: "+currency)
         val nextBillingDate =
             calculateNextBillingDate(startDate, billingCycle, subscriptionType)
 
