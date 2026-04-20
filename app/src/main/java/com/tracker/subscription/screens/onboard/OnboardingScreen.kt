@@ -49,7 +49,7 @@ fun OnboardingScreen(
 ) {
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
-    val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val playFairBold = FontFamily( Font(R.font.playfair_display_bold) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
@@ -75,25 +75,27 @@ fun OnboardingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
+                Spacer(modifier = Modifier.height(30.dp))
+
                 Image(
                     painter = painterResource(item.image),
-                    modifier = Modifier.size(250.dp).padding(top = 40.dp),
+                    modifier = Modifier.size(256.dp),
                     contentDescription = null
                 )
 
                 Text(
                     text = item.title,
                     fontSize = 34.sp,
-                    fontFamily = manropeExtraBold,
+                    fontFamily = playFairBold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 40.dp, start = 27.dp, end = 27.dp)
+                    modifier = Modifier.padding(top = 60.dp, start = 27.dp, end = 27.dp)
                 )
 
                 Spacer(modifier = Modifier.height(30.dp))
 
                 Text(
                     text = item.description,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontFamily = manropeMedium,
                     textAlign = TextAlign.Center
                 )
@@ -110,12 +112,12 @@ fun OnboardingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(65.dp)
+                .height(55.dp)
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            Color(0xFF2979FF), // blue
-                            Color(0xFF42A5F5)  // light blue
+                            Color(0xFF558B2F), // blue
+                            Color(0xFFFFFF00)  // light blue
                         )
                     ),
                     shape = RoundedCornerShape(20.dp)
@@ -150,7 +152,7 @@ fun OnboardingScreen(
                     else
                         "Next",
                     color = Color.White,
-                    fontFamily = manropeExtraBold,
+                    fontFamily = manropeBold,
                     fontSize = 20.sp
                 )
             }
@@ -173,7 +175,7 @@ fun PagerIndicator(
 
             val color =
                 if (index == currentPage)
-                    colorResource(R.color.blue)
+                    colorResource(R.color.lime)
                 else
                     Color.LightGray
 

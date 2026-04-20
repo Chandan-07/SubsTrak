@@ -1,11 +1,13 @@
 package com.tracker.subscription.screens.onboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
@@ -14,6 +16,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
@@ -37,7 +40,7 @@ fun AuthScreen(
                     colors = listOf(
                         Color(0xFFFFFFFF),
                         Color(0xFFFFFFFF),   // deep blue
-                        Color(0xFFFFFFFF),   // deep blue
+
                     )
                 )
             )
@@ -46,39 +49,38 @@ fun AuthScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(15.dp),
-            verticalArrangement = Arrangement.Top
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
 
-            Spacer(modifier = Modifier.height(30.dp))
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth().padding(top = 50.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
 
                 Icon(painter = painterResource(R.drawable.header_title), contentDescription = "",
-                    tint = Color.Unspecified
+                    tint = Color.Unspecified, modifier = Modifier.clip(CircleShape).size(150.dp)
                 )
-                Spacer(modifier = Modifier.height(30.dp))
 
-                Text(
-                    text = "SubTracker",
-                    color = colorResource(R.color.blue),
-                    fontFamily = manropeExtraBold,
-                    textAlign = TextAlign.Center,
-                    fontSize = 48.sp,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp)
-                )
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Track, Manage, and Save all your subscriptions in one place",
+                    text = "Sign in to Subtly",
                     color = colorResource(R.color.black),
+                    fontSize = 20.sp,
+                    fontFamily = manropeExtraBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(start = 40.dp, end = 40.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Continue with Google to get started",
+                    color = colorResource(R.color.text_grey),
                     fontSize = 14.sp,
                     fontFamily = manropeMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(start = 40.dp, end = 40.dp)
                 )
-                Spacer(modifier = Modifier.height(20.dp))
 
 
             }
@@ -91,13 +93,7 @@ fun AuthScreen(
                         .fillMaxWidth()
                         .padding(start = 30.dp, end = 30.dp)
                         .height(56.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFFFF4081), // blue
-                                    Color(0xFFCCFF90)  // light blue
-                                )
-                            ),
+                        .background(colorResource(R.color.dark_blue),
                             shape = RoundedCornerShape(25.dp)
                         )
                 ) {
@@ -125,9 +121,9 @@ fun AuthScreen(
                                     Spacer(Modifier.width(20.dp))
                                     Text(
                                         "Continue with Google",
-                                        fontSize = 18.sp,
+                                        fontSize = 16.sp,
                                         color = Color.White,
-                                        fontFamily = manropeExtraBold
+                                        fontFamily = manropeBold
                                     )
                                 }
                             }
@@ -143,8 +139,11 @@ fun AuthScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text("Skip for now",color = colorResource(R.color.dark_blue),
-                        fontFamily = manropeBold, fontSize = 16.sp)
+                        fontFamily = manropeBold, fontSize = 14.sp,
+                        textDecoration = TextDecoration.Underline
+                    )
                 }
+
             }
         }
     }

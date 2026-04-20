@@ -11,31 +11,37 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.queryProductDetails
 import com.tracker.subscription.data.dao.UserDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-class BillingRepository(private val context: Context, private val userDao: UserDao,) {
+class BillingRepository(
+    private val context: Context,
+    private val userDao: UserDao
+) {
+
+    private val purchasesUpdatedListener =
+        PurchasesUpdatedListener { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
+                purchases.forEach { handlePurchase(it) }
+            }
+        }
 
     private val billingClient = BillingClient.newBuilder(context)
-        .setListener { _, _ -> }
+        .setListener(purchasesUpdatedListener)
         .enablePendingPurchases()
         .build()
 
-    val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            for (purchase in purchases) {
-                handlePurchase(purchase)
-            }
-        }
-    }
-    suspend fun connect() = suspendCancellableCoroutine { cont ->
+    suspend fun connect() = suspendCancellableCoroutine<Unit> { cont ->
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    cont.resume(Unit) {
-
-                    }
+                    cont.resume(Unit) {}
+                    restorePurchases()
                 }
             }
 
@@ -66,8 +72,6 @@ class BillingRepository(private val context: Context, private val userDao: UserD
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
 
-            // VERY IMPORTANT: verify purchase first (ideally via backend)
-
             if (!purchase.isAcknowledged) {
                 val params = AcknowledgePurchaseParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken)
@@ -75,25 +79,64 @@ class BillingRepository(private val context: Context, private val userDao: UserD
 
                 billingClient.acknowledgePurchase(params) { billingResult ->
                     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-
-//                        userDao.insert()
+                        processPurchase(purchase)
                     }
                 }
             } else {
-                // Already acknowledged
-
+                processPurchase(purchase)
             }
         }
     }
+
+    private fun processPurchase(purchase: Purchase) {
+        CoroutineScope(Dispatchers.IO).launch {
+
+            val productId = purchase.products.firstOrNull()
+
+            val expiry = when (productId) {
+                "monthly_premium" ->
+                    purchase.purchaseTime + 30L * 24 * 60 * 60 * 1000
+                "premium_yearly" ->
+                    purchase.purchaseTime + 365L * 24 * 60 * 60 * 1000
+                else -> purchase.purchaseTime
+            }
+
+            userDao.updatePremiumStatus(1, true)
+            userDao.updatePurchaseToken(1, purchase.purchaseToken)
+            userDao.updateExpiry(1, expiry)
+        }
+    }
+
+    private fun restorePurchases() {
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+        ) { _, purchases ->
+            purchases.forEach { handlePurchase(it) }
+        }
+    }
+
+    suspend fun validateSubscription() {
+        val user = userDao.observeUser() ?: return
+
+        val currentTime = System.currentTimeMillis()
+        userDao.updatePremiumStatus(1, true)
+        userDao.updatePremiumStatus(1, false)
+
+    }
+
     fun launchPurchase(activity: Activity, product: ProductDetails) {
-        val offerToken = product.subscriptionOfferDetails?.first()?.offerToken
+        val offerToken = product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.offerToken ?: return
 
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(
                     BillingFlowParams.ProductDetailsParams.newBuilder()
                         .setProductDetails(product)
-                        .setOfferToken(offerToken!!)
+                        .setOfferToken(offerToken)
                         .build()
                 )
             )

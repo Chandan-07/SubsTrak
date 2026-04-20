@@ -9,9 +9,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -72,6 +78,7 @@ import com.tracker.subscription.screens.onboard.OnboardingScreen
 import com.tracker.subscription.screens.PremiumPlanScreen
 import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
+import com.tracker.subscription.screens.home.DashboardUiState
 import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
 import kotlinx.coroutines.launch
@@ -152,48 +159,60 @@ class MainActivity : ComponentActivity() {
             val currentRoute = navBackStackEntry?.destination?.route
 
             Scaffold(bottomBar = {
-
-                if (currentRoute in bottomBarRoutes) {
+                AnimatedVisibility(
+                    visible = currentRoute in bottomBarRoutes,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
+                ) {
                     NavigationBar(
                         containerColor = Color.White,
-
                         modifier = Modifier
                             .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.navigationBars) // 👈 correct way
-                            .shadow(16.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .shadow(
+                                16.dp,
+                                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                            )
                     ) {
                         bottomItems.forEach { item ->
-
                             NavigationBarItem(
-                                icon = { Icon(painter = painterResource( item.icon), contentDescription = item.label) },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(item.icon),
+                                        contentDescription = item.label
+                                    )
+                                },
                                 selected = currentRoute == item.route,
                                 onClick = {
                                     navController.navigate(item.route) {
                                         popUpTo("dashboard")
                                         launchSingleTop = true
+                                        restoreState = true   // 👈 important
                                     }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Color(0xFF1565C0),
                                     unselectedIconColor = Color.Gray,
-                                    indicatorColor = Color(0xFFE3F2FD) // light blue background
+                                    indicatorColor = Color(0xFFE3F2FD)
                                 )
                             )
                         }
                     }
                 }
+            }) { innerPadding ->
 
-            } ) { innerPadding ->
-                NavHost(
+                val bottomPadding by animateDpAsState(
+                    targetValue = if (currentRoute in bottomBarRoutes) 80.dp else 20.dp,
+                    label = ""
+                )
+                    NavHost(
                     navController = navController,
                     startDestination = destination,
                     modifier = Modifier
                         .padding(
                             start = innerPadding.calculateStartPadding(LayoutDirection.Ltr),
                             end = innerPadding.calculateEndPadding(LayoutDirection.Ltr),
-                            bottom = innerPadding.calculateBottomPadding()
-                            // 👇 REMOVE top padding
+                            bottom = bottomPadding
                         )
                 ) {
 
@@ -279,11 +298,16 @@ class MainActivity : ComponentActivity() {
                             isLoggedIn,
                             navController = navController,
                             onAddSubscription = {
-                                if(state?.subscriptions?.size == 5){
-                                    navController.navigate("premium")
-                                } else{
-                                    navController.navigate("add_subscription")
 
+                                val subsCount = (state as? DashboardUiState.Success)
+                                    ?.data
+                                    ?.subscriptions
+                                    ?.size ?: 0
+
+                                if (subsCount == 5) {
+                                    navController.navigate("premium")
+                                } else {
+                                    navController.navigate("add_subscription")
                                 }
                             }
                         )
@@ -298,27 +322,24 @@ class MainActivity : ComponentActivity() {
                                 type = NavType.IntType
                                 defaultValue = -1
                             }
-                        )
+                        ), enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }
                     ) { backStackEntry ->
 
                         val id = backStackEntry.arguments?.getInt("id")
-                        val context = LocalContext.current
 
-                        val db = DatabaseProvider.getDatabase(context)
-
-
-                        val smsDataSource = SmsDataSource(context)
-                        val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
-                        }
-                        val viewModel: AddSubscriptionViewModel = viewModel(
+                        val addSubViewModel: AddSubscriptionViewModel = viewModel(
                             factory = AddSubscriptionViewModelFactory(repository)
                         )
                         var subscription by remember { mutableStateOf<Subscription?>(null) }
 
                         LaunchedEffect(id) {
                             if (id != -1) {
-                                subscription = viewModel.getSubscription(id!!)
+                                subscription = addSubViewModel.getSubscription(id!!)
                             }
                         }
 
@@ -327,7 +348,7 @@ class MainActivity : ComponentActivity() {
                             onSave = { entity ->
 
                                 if (id == -1) {
-                                    viewModel.saveSubscription(
+                                    addSubViewModel.saveSubscription(
                                         name = entity.name,
                                         price = entity.price,
                                         currency = entity.currency,
@@ -340,7 +361,7 @@ class MainActivity : ComponentActivity() {
                                         key = entity.key
                                     )
                                 } else {
-                                    viewModel.updateSubscription(entity)
+                                    addSubViewModel.updateSubscription(entity)
                                 }
 
                                navController.popBackStack()
@@ -354,27 +375,20 @@ class MainActivity : ComponentActivity() {
 
                     composable(route="view_all_renewals",
                         enterTransition = {
-                            fadeIn(animationSpec = tween(300))
+                            slideInHorizontally { it }
                         },
                         exitTransition = {
-                            fadeOut(animationSpec = tween(300))
+                           slideOutHorizontally { it }
                         }) {
-                        val context = LocalContext.current
-
-                        val db = DatabaseProvider.getDatabase(context)
-
-                        val smsDataSource = SmsDataSource(context)
-                        val repository = remember {
-                            SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
-                        }
-                        val viewModel: DashboardViewModel = viewModel(
-                            factory = DashboardViewModelFactory(repository)
-                        )
                         val state by viewModel.uiState.collectAsState()
+
+                        val renewals = (state as? DashboardUiState.Success)
+                            ?.data
+                            ?.upcomingRenewals ?: emptyList()
 
                         ViewAllScreen(
                             title = "Upcoming Renewals",
-                            renewals = state?.upcomingRenewals,
+                            renewals = renewals,
                             onBack = {
                                 navController.popBackStack()
                             },
@@ -383,13 +397,22 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("view_all_free_trials") {
+                    composable("view_all_free_trials",enterTransition = {
+                        slideInHorizontally { it }
+                    },
+                        exitTransition = {
+                            slideOutHorizontally { it }
+                        }) {
 
                         val state by viewModel.uiState.collectAsState()
 
+                        val freeTrials = (state as? DashboardUiState.Success)
+                            ?.data
+                            ?.freeTrials ?: emptyList()
+
                         ViewAllScreen(
                             title = "Free Trials",
-                            renewals = state?.freeTrials,
+                            renewals = freeTrials,
                             onBack = {
                                 navController.popBackStack()
                             },
@@ -407,7 +430,12 @@ class MainActivity : ComponentActivity() {
                         SubscriptionScreen(isLoggedIn, navController)
                     }
 
-                    composable("premium") {
+                    composable("premium",enterTransition = {
+                        slideInHorizontally { it }
+                    },
+                        exitTransition = {
+                            slideOutHorizontally { it }
+                        }) {
                         val context = LocalContext.current
 
                         val db = DatabaseProvider.getDatabase(context)
@@ -438,9 +466,11 @@ class MainActivity : ComponentActivity() {
                             GoogleAuthHelper(context)
                         }
                         val state by viewModel.uiState.collectAsState()
-                        if (isLoggedIn){
+                        val user = if (isLoggedIn) {
+                            (state as? DashboardUiState.Success)?.data?.user
+                        } else null
                             ProfileScreen(
-                                state?.user,
+                                user = user,
                                 onSignOut = {
                                     viewModel.setLoading(true)
 
@@ -472,11 +502,11 @@ class MainActivity : ComponentActivity() {
                                             viewModel.setLoading(false) // ✅ always stop loading
                                         }
                                     }
+                                },
+                                onLogin = {
+                                    navController.navigate("auth")
                                 }
                             )
-                        } else {
-                            navController.navigate("auth")
-                        }
 
                     }
 

@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -130,21 +131,36 @@ fun PremiumPlanScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             // 🚀 Continue Button
-            Button(
-                onClick = {
-                    viewModel.purchase(activity)
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF5A5DF0)
-                )
+                    .height(65.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color(0xFF2979FF), // blue
+                                Color(0xFF2979FF)  // light blue
+                            )
+                        ),
+                        RoundedCornerShape(25.dp)
+                    ),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                Text("Continue", color = Color.White)
+                Button(
+                    onClick = {
+                        viewModel.purchase(activity)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent
+                    )
+                ) {
+                    Text("Continue",  color = Color.White, fontSize = 20.sp, fontFamily = manropeBold)
+                }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(

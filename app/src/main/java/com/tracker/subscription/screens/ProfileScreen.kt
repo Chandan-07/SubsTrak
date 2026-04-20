@@ -1,6 +1,5 @@
 package com.tracker.subscription.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,13 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +38,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -51,11 +48,9 @@ import com.tracker.subscription.data.AuthUser
 @Composable
 fun ProfileScreen(
     user:AuthUser?,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onLogin: () -> Unit
 ) {
-    val firstName = user?.name?.trim()?.split(" ")
-        ?.firstOrNull()
-        ?: "Guest"
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
@@ -77,7 +72,8 @@ fun ProfileScreen(
             Text(
                 text = "My Profile",
                 fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
+                fontFamily = manropeExtraBold,
+                color = colorResource(R.color.dark_blue)
             )
 
 //            IconButton(onClick = { /* settings */ }) {
@@ -85,47 +81,117 @@ fun ProfileScreen(
 //            }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
         // 👤 Profile Card
-        user?.let {
-            ProfileCard(user)
-        }
-
-
-        Spacer(Modifier.height(16.dp))
-
-
-
-        Spacer(Modifier.height(16.dp))
+        if (user != null){
+            user?.let {
+                ProfileCard(user)
+                Spacer(Modifier.height(16.dp))
 
 
 
-        Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-        // ⚙️ Options
-        OptionItem("Personal Details", "Member since 2026")
-        OptionItem("Help & Support", "FAQs & contact")
-        Spacer(Modifier.height(8.dp))
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .clickable {
-                    showLogoutDialog = true
+
+
+                Spacer(Modifier.height(16.dp))
+
+                // ⚙️ Options
+                OptionItem("Personal Details", "Member since 2026")
+                OptionItem("Help & Support", "FAQs & contact")
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .clickable {
+                            showLogoutDialog = true
+                        }
+                        .padding(vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().background(colorResource(R.color.blue_bg_light)).padding(16.dp),
+                    ) {
+                        Column {
+                            Text("Sign Out", color = Color.Red, fontSize = 14.sp, fontFamily = manropeExtraBold)
+                        }
+
+                    }
                 }
-                .padding(vertical = 6.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().background(colorResource(R.color.blue_bg_light)).padding(16.dp),
+            }
+        } else{
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             ) {
-                Column {
-                    Text("Sign Out", color = Color.Red, fontSize = 14.sp, fontFamily = manropeExtraBold)
-                }
+                Column(
+                    modifier = Modifier
+                        .background(Color.White).padding(20.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
 
+                    Box {
+                        // Avatar
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFFFFF)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(90.dp)
+                                    .clip(CircleShape)
+                                    .background(colorResource(R.color.lime)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "G",
+                                    fontSize = 28.sp,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+
+                        }
+
+
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = "Guest User",
+                        fontSize = 20.sp,
+                        fontFamily = manropeBold
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = "Login",
+                        fontSize = 16.sp,
+                        fontFamily = manropeExtraBold,
+                        color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(25.dp))
+                            .background(Color(0xFF3D5AFE))
+                            .clickable { onLogin()  }
+                            .padding(top = 3.dp, bottom = 6.dp, start = 20.dp, end = 20.dp),
+                        textAlign = TextAlign.Center
+                    )
+
+
+                }
             }
         }
+
+
+
+
         if (showLogoutDialog) {
             AlertDialog(
                 onDismissRequest = { showLogoutDialog = false },

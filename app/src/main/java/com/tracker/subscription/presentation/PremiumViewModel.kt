@@ -50,4 +50,13 @@ class PremiumViewModel(
             repo.launchPurchase(activity, it.productDetails)
         }
     }
+
+    fun connectPurchaseStatus(){
+        viewModelScope.launch {
+            repo.connect()
+            repo.validateSubscription()
+        }
+    }
+
+
 }

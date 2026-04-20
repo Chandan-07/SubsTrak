@@ -18,11 +18,14 @@ import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.dao.UserEntity
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.data.toDomain
+import com.tracker.subscription.screens.home.DashboardUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -31,8 +34,8 @@ class DashboardViewModel(
     private val repository: SubscriptionRepository
 ) : ViewModel() {
 
-    private val _uiState =
-        MutableStateFlow<DashboardData?>(null)
+    private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
+
     val allServices = repository.getAllServices() // your full list
     var isSigningIn by mutableStateOf(false)
         private set
@@ -54,7 +57,7 @@ class DashboardViewModel(
     private val _smsSyncState =
         MutableStateFlow<List<ParsedSubscription>>(arrayListOf())
 
-    val uiState: StateFlow<DashboardData?> = _uiState
+    val uiState = _uiState.asStateFlow()
     val smsSyncState: StateFlow<List<ParsedSubscription>> = _smsSyncState
     var currentUser by mutableStateOf<AuthUser?>(null)
         private set
@@ -62,33 +65,49 @@ class DashboardViewModel(
     private val _isLoadingSMS = MutableStateFlow(false)
     val isLoadingSMS = _isLoadingSMS.asStateFlow()
 
+    private val _filteredSubscriptions = MutableStateFlow<List<Subscription>>(emptyList())
+    val filteredSubscriptions: StateFlow<List<Subscription>> = _filteredSubscriptions
+
     init {
         observeSubscriptions()
     }
 
     private fun observeSubscriptions() {
-
         viewModelScope.launch {
+            _uiState.value = DashboardUiState.Loading
+            combine(
+                repository.getSubscriptions(),
+                repository.observeUserDetails()
+            ) { subs, user ->
 
-            repository.getSubscriptions().collect { subs ->
+
+                _filteredSubscriptions.value = subs.map {
+                    Subscription(
+                        id = it.id.toString(),
+                        name = it.name,
+                        price = it.price,
+                        subscriptionType = it.subscriptionType,
+                        logoResId = it.logoResId,
+                        key = it.key,
+                        currency = it.currency,
+                        nextBillingDate = it.nextBillingDate,
+                        billingCycle = it.billingCycle,
+                        category = it.category,
+                        startDate = it.startDate,
+                        reminderEnabled = it.reminderEnabled
+                    )
+                }
 
                 val monthlySpend =
                     subs.filter { it.billingCycle == "Monthly" }
                         .sumOf { it.price }
 
-
-                var currency = ""
-               if(subs.isNotEmpty()) {
-                   currency = subs[0].currency
-               }
-                Log.d("sdgdsg", "observeSubscriptions: "+currency)
-
+                val currency = subs.firstOrNull()?.currency ?: ""
 
                 val upcomingRenewals =
                     subs.sortedBy { it.nextBillingDate }
-                    .filter { it.subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value }
+                        .filter { it.subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value }
                         .map {
-
                             Renewal(
                                 id = it.id.toString(),
                                 name = it.name,
@@ -101,7 +120,6 @@ class DashboardViewModel(
                                 nextBillingDate = it.nextBillingDate
                             )
                         }
-                Log.d("sdgdsg", "observeSubscriptions: "+currency)
 
                 val subscriptionList = subs.map { it.toDomain() }
 
@@ -117,22 +135,26 @@ class DashboardViewModel(
                                 logoResId = it.logoResId,
                                 key = it.key,
                                 currency = it.currency,
-                                packageName = allServices.filter { filter -> it.name == filter.name }.get(0).packageName,
+                                packageName = allServices
+                                    .firstOrNull { filter -> it.name == filter.name }
+                                    ?.packageName ?: "",
                                 nextBillingDate = it.nextBillingDate
                             )
                         }
-                val dashboardData = DashboardData(
-                    monthlySpend = monthlySpend,
-                    currency = currency,
-                    upcomingRenewals = upcomingRenewals,
-                    subscriptions = subscriptionList,
-                    freeTrials = freeTrialList,
-                    user = getUser(),
-                    smsSuggestions = smsSyncState.value,
-                    isLoggedIn = isLoggedIn.value
-                )
-                Log.d("IUYTF", "observeSubscriptions: "+ dashboardData.currency)
 
+                DashboardUiState.Success(
+                    DashboardData(
+                        monthlySpend = monthlySpend,
+                        currency = currency,
+                        upcomingRenewals = upcomingRenewals,
+                        subscriptions = subscriptionList,
+                        freeTrials = freeTrialList,
+                        user = user, // ✅ FIXED
+                        smsSuggestions = smsSyncState.value,
+                        isLoggedIn = isLoggedIn.value
+                    )
+                )
+            }.collect { dashboardData ->
                 _uiState.value = dashboardData
             }
         }
@@ -199,16 +221,6 @@ class DashboardViewModel(
         }
     }
 
-    suspend fun getUser(): AuthUser {
-
-        repository.getUserDetails()?.let {
-            return AuthUser(uid = it.id, name = it.name, email = it.email, photo = it.logoResId)
-        }
-        return AuthUser(uid = "1", name = "Guest", email = "", photo = "")
-    }
-
-
-
 
     fun deleteSubscription(id: String) {
 
@@ -216,5 +228,45 @@ class DashboardViewModel(
 
             repository.deleteSubscription(id.toInt())
         }
+    }
+
+    fun searchSubscriptions(query: String) {
+
+        val state = _uiState.value
+
+        val currentSubs = if (state is DashboardUiState.Success) {
+            state.data.subscriptions
+        } else {
+            emptyList()
+        }
+
+        if (query.isBlank()) {
+            _filteredSubscriptions.value = currentSubs
+            return
+        }
+
+        val q = query.lowercase().replace(" ", "")
+
+        _filteredSubscriptions.value = currentSubs.filter {
+            it.name.lowercase().replace(" ", "").contains(q)
+        }
+    }
+
+    fun filterByCategory(category: String) {
+
+        val state = _uiState.value
+
+        val currentSubs = if (state is DashboardUiState.Success) {
+            state.data.subscriptions
+        } else {
+            emptyList()
+        }
+
+        _filteredSubscriptions.value =
+            if (category == "All") {
+                currentSubs
+            } else {
+                currentSubs.filter { it.category == category }
+            }
     }
 }

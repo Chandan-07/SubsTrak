@@ -1,6 +1,5 @@
 package com.tracker.subscription.screens.home.cards
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -51,7 +50,7 @@ import com.tracker.subscription.Utility.getGreeting
 import com.tracker.subscription.data.DashboardData
 
 @Composable
-fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double, navController: NavController) {
+fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, amount: Double, navController: NavController) {
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     var isYearly  by remember {  mutableStateOf(false) }
@@ -89,7 +88,7 @@ fun MonthlySpendCard(data: DashboardData, currency: String, amount: Double, navC
                     modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
 
                     var firstName = "Guest"
-                    if(data.isLoggedIn){
+                    if(isLoggedIn){
                         firstName = data.user?.name
                             ?.trim()
                             ?.split(" ")
@@ -339,7 +338,7 @@ fun StatItem(
 
         Box(
             modifier = Modifier
-                .size(40.dp) // circle size
+                .size(30.dp) // circle size
                 .clip(CircleShape)
                 .background(Color.White),
             contentAlignment = Alignment.Center
@@ -348,7 +347,7 @@ fun StatItem(
                 painter = painterResource(emoji),
                 contentDescription = null,
                 tint = Color.Unspecified,
-                modifier = Modifier.size(30.dp) // icon size inside
+                modifier = Modifier.size(20.dp) // icon size inside
             )
         }
         Spacer(modifier = Modifier.height(6.dp))

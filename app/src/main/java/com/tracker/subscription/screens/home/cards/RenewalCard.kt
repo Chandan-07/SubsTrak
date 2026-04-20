@@ -165,9 +165,9 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                             Text(
                                 text = renewal.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontFamily = manropeExtraBold,
-                                modifier = Modifier.padding(end = 20.dp)
+                                modifier = Modifier.padding(end = 10.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -175,14 +175,14 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFFFBBC05), // green
+                                    color = Color(0xFFF3DDB9), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
                                 .padding(horizontal = 2.dp, vertical = 2.dp)
                             ){
-                                Icon(painter = painterResource(R.drawable.glit_black),
-                                    "", modifier = Modifier.size(15.dp).padding(top = 5.dp).align(
-                                        Alignment.CenterVertically))
+                                Icon(painter = painterResource(R.drawable.timer),
+                                    "", modifier = Modifier.size(12.dp).padding(start = 3.dp).align(
+                                        Alignment.CenterVertically), tint = Color.Unspecified)
                                 Text(
                                     text = "Free Trial",
                                     color = Color.Black,
@@ -198,14 +198,14 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFF1A73E8), // green
+                                    color = Color(0xFF8BB755), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
-                                .padding(horizontal = 3.dp, vertical = 2.dp)
+                                .padding(horizontal = 3.dp, vertical = 1.dp)
                             ){
                                 Icon(painter = painterResource(R.drawable.container__2_), "",
                                     tint = Color.Unspecified,
-                                    modifier = Modifier.size(15.dp).padding(start = 2.dp, top = 3.dp, bottom = 3.dp).align(
+                                    modifier = Modifier.size(12.dp).padding(start = 2.dp, top = 2.dp, bottom = 2.dp).align(
                                         Alignment.CenterVertically))
                                 Text(
                                     text = "Active",
@@ -213,7 +213,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                                     fontSize = 9.sp,
                                     fontFamily = manropeBold,
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        .padding(horizontal = 2.dp, vertical = 2.dp)
                                     ,
                                 )
                             }
@@ -260,7 +260,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                     Row (modifier = Modifier
                         .clip(RoundedCornerShape(15.dp))
-                        .border(0.8.dp, colorResource(R.color.blue), CircleShape)
+                        .border(0.5.dp, colorResource(R.color.blue), CircleShape)
                         .background(
                             color = Color.White, // green
                             shape = RoundedCornerShape(15.dp)
@@ -282,7 +282,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                     Row (modifier = Modifier
                         .clip(RoundedCornerShape(15.dp))
-                        .border(0.8.dp, Color(0xFFD50000), CircleShape)
+                        .border(0.5.dp, Color(0xFFD50000), CircleShape)
                         .background(
                             color = Color.White, // green
                             shape = RoundedCornerShape(15.dp)
@@ -306,34 +306,20 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                 Spacer(modifier = Modifier.weight(0.2f).height(10.dp))
 
 
-                val infiniteTransition = rememberInfiniteTransition(label = "")
-                val shimmer by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1200, easing = LinearEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = ""
-                )
-
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
                             brush = Brush.linearGradient(
                                 colors = listOf(
-                                    Color(0xFF6200EA),
-                                    Color(0xFF7C4DFF),
-                                    Color(0xFF6200EA)
-                                ),
-                                start = Offset(0f, shimmer * 200f),
-                                end = Offset(200f, shimmer * 400f)
+                                    Color(0xFF1A2AC0),
+                                    Color(0xFF1A2AC0)
+                                )
                             )
                         )
                         .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                         .clickable {  openSubscription(context, renewal) }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                        .padding(horizontal = 8.dp, vertical = 7.dp)
                 ) {
 
                     Row(
@@ -343,9 +329,11 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                         Text(
                             text = "Take Action",
                             color = Color.White,
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             fontFamily = manropeExtraBold
                         )
+                        Spacer(Modifier.width(5.dp))
+                        Icon(painterResource(R.drawable.gem), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
 
                     }
                 }
@@ -487,14 +475,14 @@ fun SubscriptionItem(
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFFFBBC05), // green
+                                    color = Color(0xFFF3DDB9), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
                                 .padding(horizontal = 2.dp, vertical = 2.dp)
                             ){
-                                Icon(painter = painterResource(R.drawable.glit_black),
-                                    "", modifier = Modifier.size(15.dp).padding(top = 5.dp).align(
-                                        Alignment.CenterVertically))
+                                Icon(painter = painterResource(R.drawable.timer),
+                                    "", modifier = Modifier.size(15.dp).padding(start = 3.dp).align(
+                                        Alignment.CenterVertically), tint = Color.Unspecified)
                                 Text(
                                     text = "Free Trial",
                                     color = Color.Black,
@@ -510,7 +498,7 @@ fun SubscriptionItem(
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFF1A73E8), // green
+                                    color = Color(0xFF8BB755), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
                                 .padding(horizontal = 3.dp, vertical = 2.dp)

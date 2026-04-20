@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -152,6 +155,7 @@ fun AddSubscriptionScreen(
     var selectedPackage by remember { mutableStateOf<String?>(null) }
     var showSheet by remember { mutableStateOf(true) }
     var buttonEnabled by remember { mutableStateOf(price.isNotEmpty()) }
+    var focusPriceField by remember { mutableStateOf(false) }
 
     LaunchedEffect(existingSubscription) {
 
@@ -212,7 +216,6 @@ fun AddSubscriptionScreen(
         val manropeBold = FontFamily( Font(R.font.manrope_bold) )
         val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
         val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
-
         val interactionSource = remember { MutableInteractionSource() }
         LazyColumn (
             modifier = Modifier
@@ -225,9 +228,9 @@ fun AddSubscriptionScreen(
             item {
                 Column {
                     Text(
-                        text = "Select your Service",
+                        text = "Service Name",
                         modifier = Modifier.padding(bottom = 8.dp),
-                        fontFamily = manropeExtraBold,
+                        fontFamily = manropeBold,
                         fontSize = 18.sp
                     )
                     Spacer(Modifier.height(8.dp))
@@ -250,14 +253,16 @@ fun AddSubscriptionScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 PriceSection(
                     price = price,
                     currency = currency,
                     currencyOptions = currencyOptions,
                     onPriceChange = { price = it
                        },
-                    onCurrencySelected = { currency = it }
+                    onCurrencySelected = { currency = it },
+                    requestFocus = focusPriceField
+
                 )
             }
             item {
@@ -296,8 +301,8 @@ fun AddSubscriptionScreen(
                     val title = if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value)
                         "Subscription start date"
                     else
-                        "Billing start date (after free trial)"
-                    Text(title, fontFamily = manropeExtraBold, fontSize = 18.sp)
+                        "Billing date (After free trial)"
+                    Text(title, fontFamily = manropeBold, fontSize = 18.sp)
                     Spacer(Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
@@ -380,6 +385,7 @@ fun AddSubscriptionScreen(
                         showSheet = false
                         category = service.category
                         key = service.key
+                        focusPriceField = true   // 👈 TRIGGER KEYBOARD
                     }
                 ) }
         }
@@ -588,6 +594,7 @@ fun ServicePickerContent(
     val manropeRegular = FontFamily( Font(R.font.manrope_semi_bold) )
     val manropesemiBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = Modifier
@@ -651,7 +658,6 @@ fun ServicePickerContent(
             )
 
         Spacer(Modifier.height(12.dp))
-            val haptic = LocalHapticFeedback.current
 
         // 🧩 Category chips
         LazyRow {
@@ -707,7 +713,7 @@ fun ServicePickerContent(
 
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(45.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFFF1F3F4)),
                             contentAlignment = Alignment.Center
@@ -715,7 +721,7 @@ fun ServicePickerContent(
                             Image(
                                 painter = painterResource(service.logo),
                                 contentDescription = null,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(45.dp)
                             )
                         }
 
@@ -723,10 +729,12 @@ fun ServicePickerContent(
 
                         Text(
                             text = service.name,
-                            maxLines = 1,
+                            maxLines = 2,
+                            minLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             fontFamily = manropeRegular,
                             fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 5.dp),
                             textAlign = TextAlign.Center // 👈 CENTER TEXT
                         )
                     }
@@ -783,6 +791,84 @@ fun AddCustomServiceCard(
             style = MaterialTheme.typography.bodySmall
         )
     }
+}
+
+
+
+
+@Composable
+fun PriceSection(
+    price: String,
+    currency: String,
+    currencyOptions: List<String>,
+    onPriceChange: (String) -> Unit,
+    onCurrencySelected: (String) -> Unit,
+    requestFocus: Boolean   // 👈 NEW
+) {
+
+     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(requestFocus) {
+        if (requestFocus) {
+            focusRequester.requestFocus()
+        }
+    }
+    Column {
+        Text(
+            text = "Price & Currency",
+            fontFamily = manropeBold,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.clip(
+                RoundedCornerShape(25.dp)
+            ).border(1.dp, colorResource(R.color.light_grey), RoundedCornerShape(25.dp))
+        ) {
+            DropdownField(
+                label = "Currency",
+                selected = currency,
+                options = currencyOptions,
+                modifier = Modifier.width(95.dp),
+                onSelected = onCurrencySelected
+            )
+
+            TextField(
+                value = price,
+                onValueChange = onPriceChange,
+                modifier = Modifier
+                    .weight(0.6f)
+                    .focusRequester(focusRequester),  // 👈 attach
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    // Background inside the text field
+                    focusedContainerColor = Color(0xFFFFFFFF),
+                    unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                    // Border colors
+                    focusedBorderColor = Color(0xFFFFFFFF),
+                    unfocusedBorderColor = Color(0xFFFDFDFD),
+
+                    // Cursor
+                    cursorColor = Color(0xFF1976D2)
+                ),
+                textStyle = TextStyle(fontFamily = manropeExtraBold, fontSize = 25.sp),
+                placeholder = { Text("Ex 399.00", fontSize = 25.sp, fontFamily = manropeExtraBold, color = colorResource(R.color.grey)) },
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
+    }
+
 }
 
 @Composable
@@ -852,75 +938,6 @@ fun requestNotificationPermission(context: Context) {
         )
     }
 }
-
-
-@Composable
-fun PriceSection(
-    price: String,
-    currency: String,
-    currencyOptions: List<String>,
-    onPriceChange: (String) -> Unit,
-    onCurrencySelected: (String) -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-
-     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
-    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
-
-    Column {
-        Text(
-            text = "Price & Currency",
-            fontFamily = manropeExtraBold,
-            fontSize = 18.sp
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            DropdownField(
-                label = "Currency",
-                selected = currency,
-                options = currencyOptions,
-                modifier = Modifier.width(80.dp),
-                onSelected = onCurrencySelected
-            )
-
-            OutlinedTextField(
-                value = price,
-                onValueChange = onPriceChange,
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Done // 👈 shows Done button
-                ),
-
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        // 👇 hide keyboard
-                        focusManager.clearFocus()
-                    }
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    // Background inside the text field
-                    focusedContainerColor = Color(0xFFFFFFFF),
-                    unfocusedContainerColor = Color(0xFFFFFFFF),
-
-                    // Border colors
-                    focusedBorderColor = Color(0xFF1976D2),
-                    unfocusedBorderColor = Color(0xFFB0BEC5),
-
-                    // Cursor
-                    cursorColor = Color(0xFF1976D2)
-                ),
-                placeholder = { Text("Ex 399.00", fontSize = 12.sp, color = colorResource(R.color.grey)) },
-                shape = RoundedCornerShape(20.dp)
-            )
-        }
-    }
-
-}
-
-
 fun formatDate(time: Long): String {
 
     val sdf = SimpleDateFormat(
@@ -944,6 +961,7 @@ fun DropdownField(
 
     var expanded by remember { mutableStateOf(false) }
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
+    val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -961,18 +979,18 @@ fun DropdownField(
                 .menuAnchor()
                 .fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-
                 // Background inside the text field
                 focusedContainerColor = Color(0xFFFFFFFF),
                 unfocusedContainerColor = Color(0xFFFFFFFF),
 
                 // Border colors
-                focusedBorderColor = Color(0xFF1976D2),
-                unfocusedBorderColor = Color(0xFFB0BEC5),
+                focusedBorderColor = Color(0xFFFFFFFF),
+                unfocusedBorderColor = Color(0xFFFDFDFD),
 
                 // Cursor
                 cursorColor = Color(0xFF1976D2)
             ),
+            textStyle = TextStyle(fontFamily = manropeExtraBold, fontSize = 25.sp),
             shape = RoundedCornerShape(20.dp)
         )
 

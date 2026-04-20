@@ -12,5 +12,7 @@ data class UserEntity(
     val phone: String,
     val email: String,
     val logoResId: String? = null,
-    val isUserPremium: Boolean = false
+    val isPremium: Boolean = false,
+    val purchaseToken: String? = null,
+    val expiryTime: Long? = null
 )
