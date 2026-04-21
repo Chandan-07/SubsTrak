@@ -71,9 +71,10 @@ fun ProfileScreen(
         ) {
             Text(
                 text = "My Profile",
-                fontSize = 22.sp,
+                fontSize = 24.sp,
                 fontFamily = manropeExtraBold,
-                color = colorResource(R.color.dark_blue)
+                color = colorResource(R.color.dark_blue),
+                modifier = Modifier.padding(start = 26.dp)
             )
 
 //            IconButton(onClick = { /* settings */ }) {
@@ -81,7 +82,7 @@ fun ProfileScreen(
 //            }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(40.dp))
 
         // 👤 Profile Card
         if (user != null){

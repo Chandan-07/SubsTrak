@@ -191,11 +191,11 @@ fun SubscriptionScreen(
                                         selectedCategory = category
                                         viewModel.filterByCategory(category)
                                     },
-                                    label = { Text(category, fontFamily = manropesemiBold) },
+                                    label = { Text(category, fontFamily = manropesemiBold, color = colorResource(R.color.dark_blue)) },
                                     shape = RoundedCornerShape(50), // 👈 MORE ROUNDED
                                     modifier = Modifier.padding(end = 15.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(0xFF3D5AFE),
+                                        selectedContainerColor = colorResource(R.color.lime),
                                         selectedLabelColor = Color.White
                                     ),
                                     border = BorderStroke(0.7.dp, Color(0xFFD9D8D8))

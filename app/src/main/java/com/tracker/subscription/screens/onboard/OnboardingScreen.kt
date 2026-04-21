@@ -1,5 +1,8 @@
 package com.tracker.subscription.screens.onboard
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,8 +23,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.tracker.subscription.R
 import com.tracker.subscription.data.db.OnboardingPreference
 import com.tracker.subscription.ui.data.pages
@@ -54,6 +65,43 @@ fun OnboardingScreen(
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    var pendingAdvanceFromSecondSlide by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        pendingAdvanceFromSecondSlide = false
+        scope.launch {
+            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+        }
+    }
+
+    LaunchedEffect(pendingAdvanceFromSecondSlide) {
+        if (!pendingAdvanceFromSecondSlide) return@LaunchedEffect
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            pendingAdvanceFromSecondSlide = false
+            scope.launch {
+                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+            }
+            return@LaunchedEffect
+        }
+
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            pendingAdvanceFromSecondSlide = false
+            scope.launch {
+                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+            }
+        } else {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -106,9 +154,6 @@ fun OnboardingScreen(
             currentPage = pagerState.currentPage
         )
         Spacer(modifier = Modifier.height(20.dp))
-        val context = LocalContext.current
-        val scope = rememberCoroutineScope()
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -137,10 +182,15 @@ fun OnboardingScreen(
                         }
                         onGetStarted()
                     } else {
-                        scope.launch {
-                            pagerState.animateScrollToPage(
-                                pagerState.currentPage + 1
-                            )
+                        // Ask notification permission when the user leaves slide 2 (index 1)
+                        if (pagerState.currentPage == 1) {
+                            pendingAdvanceFromSecondSlide = true
+                        } else {
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    pagerState.currentPage + 1
+                                )
+                            }
                         }
                     }
                 }

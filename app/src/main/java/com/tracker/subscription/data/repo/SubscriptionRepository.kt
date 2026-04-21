@@ -183,7 +183,8 @@ class SubscriptionRepository(
             ReminderScheduler.scheduleReminder(
                 context,
                 id.toInt(),
-                subscription.nextBillingDate
+                subscription.nextBillingDate,
+                subscription.reminderDaysBefore
             )
         }
     }
@@ -200,7 +201,8 @@ class SubscriptionRepository(
             ReminderScheduler.scheduleReminder(
                 context,
                 subscription.id,
-                subscription.nextBillingDate
+                subscription.nextBillingDate,
+                subscription.reminderDaysBefore
             )
         }
     }

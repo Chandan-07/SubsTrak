@@ -75,24 +75,25 @@ fun PremiumPlanScreen(
                 .padding(20.dp)
         ) {
 
-            // ❌ Close button
+            Spacer(modifier = Modifier.height(50.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // 🏆 Title
+                Text(
+                    text = "Unlock Premium",
+                    fontFamily = manropeBold,
+                    fontSize = 28.sp
+                )
                 IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, contentDescription = null)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
 
-            // 🏆 Title
-            Text(
-                text = "Unlock Premium",
-                fontFamily = manropeBold,
-                fontSize = 28.sp
-            )
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -134,7 +135,7 @@ fun PremiumPlanScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(65.dp)
+                    .height(56.dp)
                     .background(
                         Brush.horizontalGradient(
                             listOf(

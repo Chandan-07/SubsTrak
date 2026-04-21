@@ -54,6 +54,7 @@ class AddSubscriptionViewModel(
         category: String,
         startDate: Long,
         reminderEnabled: Boolean,
+        reminderDaysBefore: Int,
         subscriptionType: String,
         logoId: Int?,
         key: String
@@ -72,6 +73,7 @@ class AddSubscriptionViewModel(
             startDate = startDate,
             nextBillingDate = nextBillingDate,
             reminderEnabled = reminderEnabled,
+            reminderDaysBefore = reminderDaysBefore,
             subscriptionType = subscriptionType,
             logoResId = logoId,
             key = key
@@ -118,6 +120,7 @@ class AddSubscriptionViewModel(
             startDate = subscription.startDate,
             nextBillingDate = nextBillingDate,
             reminderEnabled = subscription.reminderEnabled,
+            reminderDaysBefore = subscription.reminderDaysBefore,
             subscriptionType = subscription.subscriptionType,
             logoResId = subscription.logoResId,
             key = subscription.key

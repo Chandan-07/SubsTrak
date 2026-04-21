@@ -14,6 +14,7 @@ data class Subscription(
     val category: String,
     val subscriptionType: String,   // NEW
     val reminderEnabled: Boolean,
+    val reminderDaysBefore: Int = 1,
     val logoResId: Int? = R.drawable.empty,
     val packageName: String? = ""
 )

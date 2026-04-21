@@ -43,10 +43,10 @@ class SubscriptionReminderWorker(
 
         val daysLeft =
             TimeUnit.MILLISECONDS.toDays(sub.nextBillingDate - today)
-        // Send notification 2 days before
-        Log.d("ASJKBNDJ", "daysLeft: "+daysLeft+ sub.subscriptionType)
+        val remindBefore = sub.reminderDaysBefore.coerceIn(1, 30).toLong()
 
-        if (daysLeft in 0..2) {
+        Log.d("SDFS", "doWork: "+remindBefore)
+        if (daysLeft in 0..remindBefore) {
             showNotification(
                 id,
                 sub.name,
@@ -83,7 +83,8 @@ class SubscriptionReminderWorker(
             ReminderScheduler.scheduleReminder(
                 applicationContext,
                 id,
-                nextDate
+                nextDate,
+                sub.reminderDaysBefore
             )
         }
 
@@ -148,12 +149,12 @@ class SubscriptionReminderWorker(
 
         } else {
 
-            title = "Subscription Renewal "
+            title = "Subscription Renewal Alert"
 
             message = when (daysLeft) {
-                0L -> "$name renews today • ₹$price"
-                1L -> "$name renews tomorrow • ₹$price"
-                else -> "$name renews in $daysLeft days • ₹$price"
+                0L -> "$name renews today • ₹$price will be charged"
+                1L -> "$name renews tomorrow • ₹$price will be charged"
+                else -> "$name renews in $daysLeft days • ₹$price will be charged"
             }
         }
 

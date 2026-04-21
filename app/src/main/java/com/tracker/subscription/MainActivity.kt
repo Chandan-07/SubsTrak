@@ -78,6 +78,7 @@ import com.tracker.subscription.screens.onboard.OnboardingScreen
 import com.tracker.subscription.screens.PremiumPlanScreen
 import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
+import com.tracker.subscription.screens.calendar.CalendarScreen
 import com.tracker.subscription.screens.home.DashboardUiState
 import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
@@ -103,12 +104,14 @@ class MainActivity : ComponentActivity() {
         val bottomItems = listOf(
             BottomNavItem("dashboard", "Home", R.drawable.home),
             BottomNavItem("renewals", "Subscriptions", R.drawable.container),
+            BottomNavItem("calender", "Calender", R.drawable.calender_pick),
             BottomNavItem("profile", "Profile", R.drawable.profile)
         )
         val bottomBarRoutes = listOf(
             "dashboard",
             "renewals",
-            "profile"
+            "calender",
+            "profile",
         )
         setContent {
 
@@ -356,6 +359,7 @@ class MainActivity : ComponentActivity() {
                                         category = entity.category,
                                         startDate = entity.startDate,
                                         reminderEnabled = entity.reminderEnabled,
+                                        reminderDaysBefore = entity.reminderDaysBefore,
                                         subscriptionType = entity.subscriptionType,
                                         logoId = entity.logoResId,
                                         key = entity.key
@@ -428,6 +432,15 @@ class MainActivity : ComponentActivity() {
                             fadeOut(animationSpec = tween(300))
                         }) {
                         SubscriptionScreen(isLoggedIn, navController)
+                    }
+
+                    composable("calender", enterTransition = {
+                        fadeIn(animationSpec = tween(300))
+                    },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }) {
+                        CalendarScreen( navController)
                     }
 
                     composable("premium",enterTransition = {

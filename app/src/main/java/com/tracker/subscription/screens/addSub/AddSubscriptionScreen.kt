@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -152,6 +153,7 @@ fun AddSubscriptionScreen(
         factory = AddSubscriptionViewModelFactory(repository)
     )
     var reminderEnabled by remember { mutableStateOf(existingSubscription?.reminderEnabled ?: false) }
+    var reminderDaysBefore by remember { mutableStateOf(existingSubscription?.reminderDaysBefore ?: 1) }
     var selectedPackage by remember { mutableStateOf<String?>(null) }
     var showSheet by remember { mutableStateOf(true) }
     var buttonEnabled by remember { mutableStateOf(price.isNotEmpty()) }
@@ -166,6 +168,7 @@ fun AddSubscriptionScreen(
             category = it.category
             startDate = it.startDate
             reminderEnabled = it.reminderEnabled
+            reminderDaysBefore = it.reminderDaysBefore
             serviceLogo = it.logoResId ?: R.drawable.empty
         }
     }
@@ -370,6 +373,14 @@ fun AddSubscriptionScreen(
                         enabled = reminderEnabled,
                         onToggle = { reminderEnabled = it }
                     )
+
+                    AnimatedVisibility(visible = reminderEnabled) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ReminderDaysBeforePicker(
+                            selectedDays = reminderDaysBefore,
+                            onSelected = { reminderDaysBefore = it }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(30.dp))
@@ -427,6 +438,7 @@ fun AddSubscriptionScreen(
                             currency = currency,
                             category = category,
                             reminderEnabled = reminderEnabled,
+                            reminderDaysBefore = reminderDaysBefore,
                             subscriptionType = subscriptionType,
                             logoResId = serviceLogo,
                             key = key
@@ -936,6 +948,61 @@ fun requestNotificationPermission(context: Context) {
             arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
             1001
         )
+    }
+}
+
+@Composable
+private fun ReminderDaysBeforePicker(
+    selectedDays: Int,
+    onSelected: (Int) -> Unit
+) {
+    val options = remember { listOf(1, 2, 3, 5, 7) }
+    val selectedIndex = options.indexOf(selectedDays).takeIf { it >= 0 } ?: 0
+
+    val manropeRegular = FontFamily(Font(R.font.manrope_semi_bold))
+    val manropeBold = FontFamily(Font(R.font.manrope_bold))
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, top = 12.dp) // align under text (icon on the left)
+    ) {
+        Text(
+            text = "Notify me ${options[selectedIndex]} day(s) before",
+            fontFamily = manropeBold,
+            fontSize = 15.sp,
+            color = Color(0xFF263238)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Slider(
+            value = selectedIndex.toFloat(),
+            onValueChange = { raw ->
+                val idx = raw.toInt().coerceIn(0, options.lastIndex)
+                onSelected(options[idx])
+            },
+            valueRange = 0f..options.lastIndex.toFloat(),
+            steps = (options.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(
+                activeTrackColor = Color(0xFFFFD600),
+                activeTickColor = Color.Black,
+                inactiveTickColor = colorResource(R.color.dark_grey),
+                inactiveTrackColor = colorResource(R.color.grey),
+                thumbColor = Color(0xFFFFD600)
+            ),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            options.forEach { d ->
+                Text(
+                    text = "${d}d",
+                    fontFamily = manropeRegular,
+                    fontSize = 11.sp,
+                    color = if (d == options[selectedIndex]) Color(0xFF1976D2) else Color.Gray
+                )
+            }
+        }
     }
 }
 fun formatDate(time: Long): String {

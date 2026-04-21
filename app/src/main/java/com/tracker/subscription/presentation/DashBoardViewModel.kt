@@ -94,7 +94,8 @@ class DashboardViewModel(
                         billingCycle = it.billingCycle,
                         category = it.category,
                         startDate = it.startDate,
-                        reminderEnabled = it.reminderEnabled
+                        reminderEnabled = it.reminderEnabled,
+                        reminderDaysBefore = it.reminderDaysBefore
                     )
                 }
 
