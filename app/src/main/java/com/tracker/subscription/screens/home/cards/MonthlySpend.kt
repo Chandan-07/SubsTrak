@@ -59,7 +59,7 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 2.dp)
 
             ,
             elevation = CardDefaults.cardElevation(20.dp),
@@ -85,33 +85,10 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
             ) {
 
                 Column(horizontalAlignment = Alignment.Start,
-                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
+                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 15.dp)) {
 
-                    var firstName = "Guest"
-                    if(isLoggedIn){
-                        firstName = data.user?.name
-                            ?.trim()
-                            ?.split(" ")
-                            ?.firstOrNull()
-                            ?: ""
-                    }
 
-                    Text(
-                        text = getGreeting(),
-                        color = colorResource(R.color.white),
-                        fontFamily = manropeExtraBold,
-                        fontSize = 30.sp
-                    )
-                    Text(
-                        text = firstName,
-                        color = colorResource(R.color.white),
-                        fontFamily = manropeExtraBold,
-                        fontSize = 30.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row( modifier = Modifier.fillMaxWidth(),
+                    Row( modifier = Modifier.fillMaxWidth().padding(start = 5.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,) {
                         Text(
                             text = "${data.subscriptions.size}/5 subscriptions",
@@ -172,7 +149,7 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                     }
 
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier
                             .padding(top = 15.dp)
@@ -187,108 +164,80 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                         StatItem(R.drawable.notification_bell, "Renewals", data.upcomingRenewals.size)
                     }
 
-                }
-            }
 
-        }
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp)
-
-            ,
-            elevation = CardDefaults.cardElevation(30.dp),
-            shape = RoundedCornerShape(30.dp)
-
-        ) {
-
-            // 🔹 MAIN CARD
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFFFFF3E0),
-                                Color(0xFFF1DEF3),
-                                Color(0xFFE3F2FD)
-                            )
-                        )
+                    val displayAmount by animateFloatAsState(
+                        targetValue = if (isYearly) (amount * 12).toFloat() else amount.toFloat(),
+                        animationSpec = tween(200),
+                        label = ""
                     )
-                ,
-                contentAlignment = Alignment.TopStart
-            ) {
 
-                val displayAmount by animateFloatAsState(
-                    targetValue = if (isYearly) (amount * 12).toFloat() else amount.toFloat(),
-                    animationSpec = tween(200),
-                    label = ""
-                )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(28.dp))
+                            .padding(horizontal = 12.dp, vertical = 15.dp)
+                    ) {
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(28.dp))
-                        .padding(20.dp)
-                ) {
+                        Column {
 
-                    Column {
+                            // 🔝 Header Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
 
-                        // 🔝 Header Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top
-                        ) {
+                                Column {
 
-                            Column {
+                                    Text(
+                                        text = if (isYearly) "Yearly Spend" else "Monthly Spend",
+                                        color = Color.White,
+                                        fontFamily = manropeMedium,
+                                        fontSize = 13.sp
+                                    )
 
-                                Text(
-                                    text = if (isYearly) "Yearly Spend" else "Monthly Spend",
-                                    color = Color.Black.copy(alpha = 0.6f),
-                                    fontFamily = manropeExtraBold,
-                                    fontSize = 13.sp
-                                )
+                                    Spacer(modifier = Modifier.height(10.dp))
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                    // 🔘 Premium Toggle
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(Color.White)
+                                            .padding(4.dp)
+                                    ) {
 
-                                // 🔘 Premium Toggle
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .background(Color.White)
-                                        .padding(4.dp)
-                                ) {
+                                        ToggleItem(
+                                            text = "Monthly",
+                                            selected = !isYearly
+                                        ) { isYearly = false }
 
-                                    ToggleItem(
-                                        text = "Monthly",
-                                        selected = !isYearly
-                                    ) { isYearly = false }
-
-                                    ToggleItem(
-                                        text = "Yearly",
-                                        selected = isYearly
-                                    ) { isYearly = true }
+                                        ToggleItem(
+                                            text = "Yearly",
+                                            selected = isYearly
+                                        ) { isYearly = true }
+                                    }
                                 }
-                            }
 
-                            // 💰 Animated Amount
-                            Column(horizontalAlignment = Alignment.End) {
-                                val displayRounded = displayAmount.toInt()
-                                Text(
-                                    text = formatCurrency(displayRounded.toDouble(), data.currency),
-                                    fontSize = 34.sp,
-                                    fontFamily = manropeExtraBold,
-                                    color = Color(0xFF0D1B2A)
-                                )
+                                // 💰 Animated Amount
+                                Column(horizontalAlignment = Alignment.End) {
+                                    val displayRounded = displayAmount.toInt()
+                                    Text(
+                                        text = formatCurrency(displayRounded.toDouble(), data.currency),
+                                        fontSize = 30.sp,
+                                        fontFamily = manropeExtraBold,
+                                        color = Color(0xFFFAF6F5)
+                                    )
 
+                                }
                             }
                         }
                     }
+
                 }
+
             }
 
         }
+
 
     }
 
@@ -307,7 +256,7 @@ fun ToggleItem(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(
-                if (selected) Color(0xFFFF8A80) else Color.Transparent
+                if (selected) Color(0xFFFFC400) else Color.Transparent
             )
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 6.dp)

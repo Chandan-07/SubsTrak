@@ -66,6 +66,7 @@ object SubscriptionRenewalCalendar {
                         cursor = Utility.calculateNextBillingDate(
                             cursor,
                             sub.billingCycle,
+                            sub.freeTrialPeriod,
                             sub.subscriptionType
                         )
                         guard++
@@ -78,6 +79,7 @@ object SubscriptionRenewalCalendar {
                         cursor = Utility.calculateNextBillingDate(
                             cursor,
                             sub.billingCycle,
+                            sub.freeTrialPeriod,
                             sub.subscriptionType
                         )
                         guard++

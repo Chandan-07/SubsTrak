@@ -31,5 +31,6 @@ data class SubscriptionEntity(
 
     val logoResId: Int? = null,
 
-    val key: String
-)
+    val key: String,
+
+    val freeTrialPeriod: String = "")

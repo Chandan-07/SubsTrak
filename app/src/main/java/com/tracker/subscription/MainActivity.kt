@@ -275,8 +275,8 @@ class MainActivity : ComponentActivity() {
                                     if (!isLoading) {
                                         scope.launch {
                                             OnboardingPreference.setAuthSkipped(context)
+                                            navController.navigate("dashboard")
                                         }
-                                        navController.navigate("dashboard")
                                     }
                                 }
                             )
@@ -362,7 +362,8 @@ class MainActivity : ComponentActivity() {
                                         reminderDaysBefore = entity.reminderDaysBefore,
                                         subscriptionType = entity.subscriptionType,
                                         logoId = entity.logoResId,
-                                        key = entity.key
+                                        key = entity.key,
+                                        freeTrialPeriod = entity.freeTrialPeriod
                                     )
                                 } else {
                                     addSubViewModel.updateSubscription(entity)

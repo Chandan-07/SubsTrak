@@ -75,6 +75,7 @@ class SubscriptionReminderWorker(
                 calculateNextBillingDate(
                     sub.nextBillingDate,
                     sub.billingCycle,
+                    sub.freeTrialPeriod,
                     sub.subscriptionType
                 )
 

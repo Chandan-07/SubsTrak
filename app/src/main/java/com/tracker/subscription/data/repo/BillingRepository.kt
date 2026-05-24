@@ -101,9 +101,9 @@ class BillingRepository(
                 else -> purchase.purchaseTime
             }
 
-            userDao.updatePremiumStatus(1, true)
-            userDao.updatePurchaseToken(1, purchase.purchaseToken)
-            userDao.updateExpiry(1, expiry)
+//            userDao.updatePremiumStatus(1, true)
+//            userDao.updatePurchaseToken(1, purchase.purchaseToken)
+//            userDao.updateExpiry(1, expiry)
         }
     }
 
@@ -121,8 +121,8 @@ class BillingRepository(
         val user = userDao.observeUser() ?: return
 
         val currentTime = System.currentTimeMillis()
-        userDao.updatePremiumStatus(1, true)
-        userDao.updatePremiumStatus(1, false)
+//        userDao.updatePremiumStatus(1, true)
+//        userDao.updatePremiumStatus(1, false)
 
     }
 

@@ -14,8 +14,8 @@ android {
         applicationId = "com.tracker.subscription"
         minSdk = 24
         targetSdk = 35
-        versionCode = 27
-        versionName = "1.0.27"
+        versionCode = 34
+        versionName = "1.0.34"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

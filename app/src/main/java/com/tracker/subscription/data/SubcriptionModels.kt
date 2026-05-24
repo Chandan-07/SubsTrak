@@ -8,6 +8,7 @@ data class Subscription(
     val name: String,
     val price: Double,
     val billingCycle: String,
+    val freeTrialPeriod: String,
     val startDate: Long,
     val nextBillingDate: Long,
     val currency: String,

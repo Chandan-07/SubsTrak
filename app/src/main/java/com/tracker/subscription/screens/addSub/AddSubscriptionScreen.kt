@@ -70,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tracker.subscription.R
 import com.tracker.subscription.Utility
 import com.tracker.subscription.Utility.calculateNextBillingDate
+import com.tracker.subscription.Utility.getLocalizedPrice
 import com.tracker.subscription.data.Service
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
@@ -95,6 +96,8 @@ fun AddSubscriptionScreen(
     var serviceName by remember {
         mutableStateOf(existingSubscription?.name ?: "")
     }
+    val country = Locale.getDefault().country
+
 
     var price by remember {
         mutableStateOf(existingSubscription?.price?.toString() ?: "")
@@ -102,6 +105,10 @@ fun AddSubscriptionScreen(
 
     var billingCycle by remember {
         mutableStateOf(existingSubscription?.billingCycle ?: "Monthly")
+    }
+
+    var freeTrialPeriod by remember {
+        mutableStateOf(existingSubscription?.freeTrialPeriod ?: "7 days")
     }
 
     var startDate by remember {
@@ -157,7 +164,6 @@ fun AddSubscriptionScreen(
     var selectedPackage by remember { mutableStateOf<String?>(null) }
     var showSheet by remember { mutableStateOf(true) }
     var buttonEnabled by remember { mutableStateOf(price.isNotEmpty()) }
-    var focusPriceField by remember { mutableStateOf(false) }
 
     LaunchedEffect(existingSubscription) {
 
@@ -165,6 +171,7 @@ fun AddSubscriptionScreen(
             serviceName = it.name
             price = it.price.toString()
             billingCycle = it.billingCycle
+            freeTrialPeriod = it.freeTrialPeriod
             category = it.category
             startDate = it.startDate
             reminderEnabled = it.reminderEnabled
@@ -264,7 +271,6 @@ fun AddSubscriptionScreen(
                     onPriceChange = { price = it
                        },
                     onCurrencySelected = { currency = it },
-                    requestFocus = focusPriceField
 
                 )
             }
@@ -286,11 +292,19 @@ fun AddSubscriptionScreen(
                         BillingChips(
                         label = "Billing Cycle",
                         selected = billingCycle,
-                        isEmojiShow = false,
+                            isFreeTrial = false,
                         options = CommonOptions.billing,
                         onSelected = { billingCycle = it }
                     )
-                }
+                } else {
+                        BillingChips(
+                            label = "FreeTrial ends in",
+                            selected = freeTrialPeriod,
+                            isFreeTrial = true,
+                            options = CommonOptions.freeTrial,
+                            onSelected = { freeTrialPeriod = it }
+                            )
+                    }
 
             }
 
@@ -301,73 +315,47 @@ fun AddSubscriptionScreen(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val title = if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value)
-                        "Subscription start date"
-                    else
-                        "Billing date (After free trial)"
-                    Text(title, fontFamily = manropeBold, fontSize = 18.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDatePicker = true }
-                    ) {
-                        OutlinedTextField(
-                            value = startDate?.let { formatDate(it) } ?: "",
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = false,
-                            textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
-                            colors = OutlinedTextFieldDefaults.colors(
 
-                                // Background inside the text field
-                                focusedContainerColor = Color(0xFFFFFFFF),
-                                unfocusedContainerColor = Color(0xFFFFFFFF),
 
-                                // Border colors
-                                focusedBorderColor = Color(0xFF1976D2),
-                                unfocusedBorderColor = Color(0xFFB0BEC5),
+                    if ((subscriptionType == SubscriptionType.FREE_TRIAL.value && freeTrialPeriod == "custom") || (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value )){
+                        val title = if (subscriptionType == SubscriptionType.PAID_SUBSCRIPTION.value)
+                            "Subscription start date"
+                        else
+                            "Billing date (After free trial)"
+                        Text(title, fontFamily = manropeBold, fontSize = 18.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDatePicker = true }
+                        ) {
+                            OutlinedTextField(
+                                value = startDate?.let { formatDate(it) } ?: "",
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = false,
+                                textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
+                                colors = OutlinedTextFieldDefaults.colors(
 
-                                // Cursor
-                                cursorColor = Color(0xFF1976D2)
-                            ),
-                            trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp)
-                        )
+                                    // Background inside the text field
+                                    focusedContainerColor = Color(0xFFFFFFFF),
+                                    unfocusedContainerColor = Color(0xFFFFFFFF),
+
+                                    // Border colors
+                                    focusedBorderColor = Color(0xFF1976D2),
+                                    unfocusedBorderColor = Color(0xFFB0BEC5),
+
+                                    // Cursor
+                                    cursorColor = Color(0xFF1976D2)
+                                ),
+                                trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
 
-//                    Text("When does the billing start?", fontFamily = manropeBold, fontSize = 18.sp)
-//                    Box(
-//                        modifier = Modifier
-//                            .fillMaxWidth()
-//                            .clickable { showDatePicker = true }
-//                    ) {
-//                        OutlinedTextField(
-//                            value = startDate?.let { formatDate(it) } ?: "",
-//                            onValueChange = {},
-//                            readOnly = true,
-//                            enabled = false,
-//                            textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
-//                            colors = OutlinedTextFieldDefaults.colors(
-//
-//                                // Background inside the text field
-//                                focusedContainerColor = Color(0xFFFFFFFF),
-//                                unfocusedContainerColor = Color(0xFFFFFFFF),
-//
-//                                // Border colors
-//                                focusedBorderColor = Color(0xFF1976D2),
-//                                unfocusedBorderColor = Color(0xFFB0BEC5),
-//
-//                                // Cursor
-//                                cursorColor = Color(0xFF1976D2)
-//                            ),
-//                            trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
-//                            modifier = Modifier.fillMaxWidth(),
-//                            shape = RoundedCornerShape(20.dp)
-//                        )
-//                    }
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     ReminderToggle(
                         enabled = reminderEnabled,
@@ -396,7 +384,9 @@ fun AddSubscriptionScreen(
                         showSheet = false
                         category = service.category
                         key = service.key
-                        focusPriceField = true   // 👈 TRIGGER KEYBOARD
+                        getLocalizedPrice(service, currency)?.monthlyPrice?.let { prc ->
+                        price = prc.toString()
+                    }
                     }
                 ) }
         }
@@ -434,14 +424,15 @@ fun AddSubscriptionScreen(
                             price = price.toDouble(),
                             billingCycle = billingCycle,
                             startDate = startDate,
-                            nextBillingDate = calculateNextBillingDate(startDate, billingCycle, subscriptionType),
+                            nextBillingDate = calculateNextBillingDate(startDate, billingCycle, freeTrialPeriod, subscriptionType),
                             currency = currency,
                             category = category,
                             reminderEnabled = reminderEnabled,
                             reminderDaysBefore = reminderDaysBefore,
                             subscriptionType = subscriptionType,
                             logoResId = serviceLogo,
-                            key = key
+                            key = key,
+                            freeTrialPeriod = freeTrialPeriod
                         )
                         onSave(subscription)
                     } else {
@@ -778,7 +769,8 @@ fun AddCustomServiceCard(
                         logo = -1,
                         packageName = query,
                         category = "Custom",
-                        key = "key"
+                        key = "key",
+                        prices = emptyList()
                     )
                 )
             }
@@ -815,7 +807,6 @@ fun PriceSection(
     currencyOptions: List<String>,
     onPriceChange: (String) -> Unit,
     onCurrencySelected: (String) -> Unit,
-    requestFocus: Boolean   // 👈 NEW
 ) {
 
      val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
@@ -824,11 +815,11 @@ fun PriceSection(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(requestFocus) {
-        if (requestFocus) {
-            focusRequester.requestFocus()
-        }
-    }
+//    LaunchedEffect(requestFocus) {
+//        if (requestFocus) {
+//            focusRequester.requestFocus()
+//        }
+//    }
     Column {
         Text(
             text = "Price & Currency",

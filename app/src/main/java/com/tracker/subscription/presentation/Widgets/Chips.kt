@@ -111,7 +111,7 @@ fun BillingChips(
     selected: String,
     options: List<Option>,
     modifier: Modifier = Modifier,
-    isEmojiShow: Boolean = false,
+    isFreeTrial: Boolean = false,
     onSelected: (String) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -129,7 +129,7 @@ fun BillingChips(
 
         FlowRow(
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50))
             .background(
                 Color(0xFFF5F5F5)
@@ -161,7 +161,7 @@ fun BillingChips(
                             text = option.name,
                             color =  Color.Black,
                             fontFamily = manropeBold,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 25.dp)
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = if (isFreeTrial)10.dp else 25.dp)
                         )
                     }
 

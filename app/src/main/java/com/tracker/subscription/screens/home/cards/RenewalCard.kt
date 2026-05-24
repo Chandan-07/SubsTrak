@@ -332,8 +332,8 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                             fontSize = 10.sp,
                             fontFamily = manropeExtraBold
                         )
-                        Spacer(Modifier.width(5.dp))
-                        Icon(painterResource(R.drawable.gem), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
+//                        Spacer(Modifier.width(5.dp))
+//                        Icon(painterResource(R.drawable.gem), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
 
                     }
                 }

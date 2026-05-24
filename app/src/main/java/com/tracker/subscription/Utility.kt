@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.Color
+import com.tracker.subscription.data.SubscriptionPrice
 import com.tracker.subscription.data.SubscriptionType
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -15,11 +16,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import com.tracker.subscription.data.Service as Service1
 
 object Utility {
     fun calculateNextBillingDate(
         startDate: Long,
         billingCycle: String,
+        freeTrialPeriod: String,
         subscriptionType: String
     ): Long {
 
@@ -34,6 +37,17 @@ object Utility {
                 "Weekly" -> calendar.add(Calendar.WEEK_OF_MONTH, 1)
 
                 "Yearly" -> calendar.add(Calendar.YEAR, 1)
+            }
+        } else {
+            when (freeTrialPeriod) {
+
+                "7 days" -> calendar.add(Calendar.DAY_OF_YEAR, 7)
+
+                "14 days" -> {
+                    calendar.add(Calendar.DAY_OF_YEAR, 14)
+                }
+
+                "30 days" -> calendar.add(Calendar.DAY_OF_YEAR, 30)
             }
         }
         return calendar.timeInMillis
@@ -52,10 +66,10 @@ object Utility {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
         return when (hour) {
-            in 5..11 -> "Good Morning ☀️"
-            in 12..16 -> "Good Afternoon 🌤️"
-            in 17..20 -> "Good Evening 🌇"
-            else -> "Good Night 🌙"
+            in 5..11 -> "Good Morning ☀️, "
+            in 12..16 -> "Good Afternoon 🌤️, "
+            in 17..20 -> "Good Evening 🌇, "
+            else -> "Good Night 🌙, "
         }
     }
 
@@ -134,7 +148,7 @@ object Utility {
         // 🔹 FREE TRIAL
         if (subscriptionType == SubscriptionType.FREE_TRIAL.value) {
             return when {
-                daysLeft < 0 -> "Trial ended ${formatPast(absDays)}"
+                daysLeft < 0 -> "${formatPast(absDays)}"
                 daysLeft == 0 -> "Ends today"
                 daysLeft == 1 -> "Ends tomorrow"
                 else -> formatFuture(daysLeft)
@@ -171,6 +185,18 @@ object Utility {
             Color(0xFFFFAB00)  // Amber
         )
         return colors.random()
+    }
+
+    fun getLocalizedPrice(
+        service: Service1,
+        currency: String
+    ): SubscriptionPrice? {
+
+        return service.prices.find {
+            it.currency.equals(currency, ignoreCase = true)
+        } ?: service.prices.find {
+            it.currency == "$"
+        }
     }
 
 

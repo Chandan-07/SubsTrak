@@ -57,12 +57,13 @@ class AddSubscriptionViewModel(
         reminderDaysBefore: Int,
         subscriptionType: String,
         logoId: Int?,
-        key: String
+        key: String,
+        freeTrialPeriod: String
     ) {
 
         Log.d("ASFAS", "saveSubscription: "+currency)
         val nextBillingDate =
-            calculateNextBillingDate(startDate, billingCycle, subscriptionType)
+            calculateNextBillingDate(startDate, billingCycle, freeTrialPeriod, subscriptionType)
 
         val subscription = SubscriptionEntity(
             name = name,
@@ -76,7 +77,8 @@ class AddSubscriptionViewModel(
             reminderDaysBefore = reminderDaysBefore,
             subscriptionType = subscriptionType,
             logoResId = logoId,
-            key = key
+            key = key,
+            freeTrialPeriod = freeTrialPeriod
         )
 
         viewModelScope.launch {
@@ -108,7 +110,8 @@ class AddSubscriptionViewModel(
     fun convertSubscriptionEntity(subscription: Subscription): SubscriptionEntity {
 
         val nextBillingDate =
-            calculateNextBillingDate(subscription.startDate, subscription.billingCycle, subscription.subscriptionType)
+            calculateNextBillingDate(subscription.startDate,subscription.billingCycle, subscription.freeTrialPeriod,
+                subscription.subscriptionType)
 
         return SubscriptionEntity(
             id = subscription.id.toInt(),
@@ -123,7 +126,8 @@ class AddSubscriptionViewModel(
             reminderDaysBefore = subscription.reminderDaysBefore,
             subscriptionType = subscription.subscriptionType,
             logoResId = subscription.logoResId,
-            key = subscription.key
+            key = subscription.key,
+            freeTrialPeriod = subscription.freeTrialPeriod
         )
     }
 

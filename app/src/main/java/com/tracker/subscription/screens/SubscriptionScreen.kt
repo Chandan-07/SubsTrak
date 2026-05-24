@@ -204,7 +204,7 @@ fun SubscriptionScreen(
                         }
 
                         Spacer(Modifier.height(16.dp))
-                        LazyColumn() {
+                        LazyColumn(modifier = Modifier.padding(bottom = 50.dp)) {
                             items(subscriptions) { sub ->
 
                                 SubscriptionItem(

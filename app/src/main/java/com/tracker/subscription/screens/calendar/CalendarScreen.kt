@@ -1,5 +1,6 @@
 package com.tracker.subscription.screens.calendar
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -279,6 +280,11 @@ private fun CalendarDayCell(
 ) {
     val borderColor = if (isToday) colorResource(R.color.lime) else Color(0xFFE0E0E0)
     val bg = if (isToday) Color(0xFFFFF877) else Color.White
+    val colors = listOf(
+        Color(0xFFCE93D8),
+    )
+    val randomColor = colors.random()
+    val manropeBold = FontFamily(Font(R.font.manrope_bold))
 
     Box(
         modifier = Modifier
@@ -310,13 +316,32 @@ private fun CalendarDayCell(
                 ) {
                     val show = cell.events.take(4)
                     show.forEach { ev ->
-                        Image(
-                            painter = painterResource(ev.logoResId ?: R.drawable.empty),
-                            contentDescription = ev.name,
+
+                        Log.d("KUSHGDF", "CalendarDayCell: "+ev.logoResId)
+                        if (ev.logoResId != null && ev.logoResId != -1) {
+                            Image(
+                                painter = painterResource(ev.logoResId ?: R.drawable.empty),
+                                contentDescription = ev.name,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                        Box(
                             modifier = Modifier
                                 .size(16.dp)
                                 .clip(CircleShape)
-                        )
+                                .background(randomColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = ev.name.first().uppercase(),
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontFamily = manropeBold
+                            )
+                        }
+                    }
                     }
                     if (cell.events.size > 4) {
                         Text(

@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -218,8 +219,60 @@ fun DashboardScreen(
                             .background(color = Color(0xDCF6F8FF))
                             .fillMaxSize()
                             .padding(padding)
-                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 0.dp)
+                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 20.dp)
                     ) {
+                        item {
+                            var firstName = "Guest"
+                            if(isLoggedIn){
+                                firstName = data.user?.name
+                                    ?.trim()
+                                    ?.split(" ")
+                                    ?.firstOrNull()
+                                    ?: ""
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Row  {
+                                    Text(
+                                        text = getGreeting(),
+                                        color = colorResource(R.color.black),
+                                        fontFamily = manropeExtraBold,
+                                        fontSize = 20.sp
+                                    )
+
+                                    Text(
+                                        text = firstName,
+                                        color = colorResource(R.color.black),
+                                        fontFamily = manropeExtraBold,
+                                        fontSize = 22.sp
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .shadow(4.dp, RoundedCornerShape(12.dp))
+                                        .background(
+                                            Color.White,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable { navController.navigate("renewals") }
+                                        .padding(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = Color.Black
+                                    )
+                                }
+                            }
+
+                        }
                         item {
                             MonthlySpendCard(isLoggedIn,data, data.currency, data.monthlySpend, navController)
                         }

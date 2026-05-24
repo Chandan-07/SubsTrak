@@ -95,7 +95,8 @@ class DashboardViewModel(
                         category = it.category,
                         startDate = it.startDate,
                         reminderEnabled = it.reminderEnabled,
-                        reminderDaysBefore = it.reminderDaysBefore
+                        reminderDaysBefore = it.reminderDaysBefore,
+                        freeTrialPeriod = it.freeTrialPeriod
                     )
                 }
 
