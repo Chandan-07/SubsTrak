@@ -41,10 +41,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tracker.subscription.data.Renewal
 import com.tracker.subscription.data.Subscription
-import com.tracker.subscription.presentation.DashboardViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
@@ -82,31 +80,27 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.tracker.subscription.R
 import com.tracker.subscription.Utility.getGreeting
+import com.google.firebase.auth.FirebaseUser
+import com.tracker.subscription.Utility.displayFirstName
 import com.tracker.subscription.data.DashboardData
-import com.tracker.subscription.data.dao.SmsDataSource
-import com.tracker.subscription.data.db.DatabaseProvider
-import com.tracker.subscription.data.repo.SubscriptionRepository
-import com.tracker.subscription.presentation.DashboardViewModelFactory
+import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.screens.home.cards.MonthlySpendCard
+import com.tracker.subscription.screens.home.cards.PremiumTag
 import com.tracker.subscription.screens.home.cards.RenewalItem
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @Composable
 fun DashboardScreen(
+    viewModel: DashboardViewModel,
     isLoggedIn: Boolean,
+    firebaseUser: FirebaseUser?,
+    guestPremiumOwned: Boolean,
     navController: NavController,
-    onAddSubscription: () -> Unit = {}
+    onAddSubscription: () -> Unit = {},
+    isDarkTheme: Boolean
 ) {
-
     val context = LocalContext.current
-    val db = DatabaseProvider.getDatabase(context)
-    val smsDataSource = SmsDataSource(context)
-    val repository = remember {
-        SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
-    }
-
-    val viewModel: DashboardViewModel = viewModel(
-        factory = DashboardViewModelFactory(repository)
-    )
+    val isAuthenticated = isLoggedIn || firebaseUser != null
     val state by viewModel.uiState.collectAsState()
     val smsState by viewModel.smsSyncState.collectAsState()
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
@@ -126,11 +120,11 @@ fun DashboardScreen(
                                 .shadow(
                                     elevation = 2.dp,
                                     shape = RoundedCornerShape(30),
-                                    ambientColor = Color(0xFF033556),
+                                    ambientColor = ThemeColors.getDarkBlueColor(isDarkTheme),
                                     spotColor = colorResource(R.color.dark_blue)
                                 )
                                 .background(
-                                    color = colorResource(R.color.lime),
+                                    color = colorResource(R.color.blue),
                                     shape = if (data?.subscriptions?.isEmpty() == true) RoundedCornerShape(
                                         30
                                     ) else RoundedCornerShape(100.dp),
@@ -152,11 +146,11 @@ fun DashboardScreen(
                                 if (data?.subscriptions?.isEmpty() == true) {
 
                                     Row(Modifier.padding(5.dp)) {
-                                        Icon(imageVector = Icons.Default.Add,"")
+                                        Icon(imageVector = Icons.Default.Add,"", tint = Color.White)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = "Add Subscriptions",
-                                            color = colorResource(R.color.dark_blue),
+                                            color = colorResource(R.color.white),
                                             fontFamily = manropeBold
                                         )
                                     }
@@ -170,15 +164,17 @@ fun DashboardScreen(
                             onClick = onAddSubscription,
                             containerColor = Color.Transparent,
                             shape = CircleShape,
+                            modifier = Modifier.size(48.dp),
                             elevation = FloatingActionButtonDefaults.elevation(
-                                defaultElevation = 5.dp,
+                                defaultElevation = 4.dp,
                                 pressedElevation = 0.dp
                             ),
                         ) {
                             Icon(
                                 painterResource(R.drawable.fab_add),
                                 contentDescription = null,
-                                tint = Color.Unspecified
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(48.dp)
                             )
                         }
                     }
@@ -209,27 +205,33 @@ fun DashboardScreen(
                 if (data.subscriptions.isEmpty()) {
 
                     Box {
-                        EmptySubscriptionScreen(navController,isLoggedIn,data)
+                            EmptySubscriptionScreen(
+                                navController = navController,
+                                isAuthenticated = isAuthenticated,
+                                data = data,
+                                firebaseUser = firebaseUser,
+                                guestPremiumOwned = guestPremiumOwned,
+                                isAppUserSignedIn = isAuthenticated,
+                                isDarkTheme = isDarkTheme
+                            )
+
                     }
 
                 } else {
 
                     LazyColumn(
                         modifier = Modifier
-                            .background(color = Color(0xDCF6F8FF))
+                            .background(color = ThemeColors.getBlueBgColor(isDarkTheme))
                             .fillMaxSize()
                             .padding(padding)
-                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 20.dp)
+                            .padding(start = 10.dp, end = 10.dp, top = 0.dp, bottom = 20.dp)
                     ) {
                         item {
-                            var firstName = "Guest"
-                            if(isLoggedIn){
-                                firstName = data.user?.name
-                                    ?.trim()
-                                    ?.split(" ")
-                                    ?.firstOrNull()
-                                    ?: ""
-                            }
+                            val firstName = displayFirstName(
+                                profileName = data.user?.name,
+                                firebaseDisplayName = firebaseUser?.displayName,
+                                isAuthenticated = isAuthenticated
+                            )
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -241,14 +243,14 @@ fun DashboardScreen(
                                 Row  {
                                     Text(
                                         text = getGreeting(),
-                                        color = colorResource(R.color.black),
+                                        color = ThemeColors.getTextColor(isDarkTheme),
                                         fontFamily = manropeExtraBold,
                                         fontSize = 20.sp
                                     )
 
                                     Text(
                                         text = firstName,
-                                        color = colorResource(R.color.black),
+                                        color = ThemeColors.getTextColor(isDarkTheme),
                                         fontFamily = manropeExtraBold,
                                         fontSize = 22.sp
                                     )
@@ -274,7 +276,17 @@ fun DashboardScreen(
 
                         }
                         item {
-                            MonthlySpendCard(isLoggedIn,data, data.currency, data.monthlySpend, navController)
+                            MonthlySpendCard(
+                                isLoggedIn = isLoggedIn,
+                                isAppUserSignedIn = isAuthenticated,
+                                guestPremiumOwned = guestPremiumOwned,
+                                data = data,
+                                currency = data.currency,
+                                amount = data.monthlySpend,
+                                navController = navController,
+                                isDarkTheme
+
+                            )
                         }
 
                         if (data.freeTrials.isNotEmpty()){
@@ -290,7 +302,7 @@ fun DashboardScreen(
 
                                     Text(
                                         text = "Free Trials",
-                                        color = colorResource(R.color.black),
+                                        color = ThemeColors.getTextColor(isDarkTheme),
                                         fontSize = 21.sp,
                                         fontFamily = manropeExtraBold,
                                         modifier = Modifier
@@ -302,7 +314,7 @@ fun DashboardScreen(
                                         Row {
                                             Text(
                                                 text = "View All",
-                                                color = colorResource(R.color.blue),
+                                                color = ThemeColors.getTextColor(isDarkTheme),
                                                 fontSize = 14.sp,
                                                 fontFamily = manropeExtraBold,
                                                 modifier = Modifier
@@ -328,7 +340,7 @@ fun DashboardScreen(
                             }
 
                             items(data.freeTrials.take(3)) {
-                                RenewalItem(it, context, viewModel.getServiceByKey(it.key), onEdit = { subscription ->
+                                RenewalItem(it, context, viewModel.getServiceByKey(it.key), isDarkTheme, onEdit = { subscription ->
                                     navController.navigate("add_subscription?id=${subscription.id}")
 
                                 }, onDelete = { subscription ->
@@ -350,7 +362,7 @@ fun DashboardScreen(
                                     Text(
                                         text = "Upcoming Renewals",
                                         fontFamily = manropeExtraBold,
-                                        color = colorResource(R.color.black),
+                                        color = ThemeColors.getTextColor(isDarkTheme),
                                         fontSize = 21.sp,
                                         modifier = Modifier
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -359,7 +371,7 @@ fun DashboardScreen(
                                     if (data.upcomingRenewals.size >2){
                                         Text(
                                             text = "View All",
-                                            color = colorResource(R.color.blue),
+                                            color = ThemeColors.getTextColor(isDarkTheme),
                                             fontSize = 14.sp,
                                             fontFamily = manropeExtraBold,
                                             modifier = Modifier
@@ -380,7 +392,7 @@ fun DashboardScreen(
 
                             }
                             items(data.upcomingRenewals.take(3)) {
-                                RenewalItem(it, context, viewModel.getServiceByKey(it.key), onEdit = { subscription ->
+                                RenewalItem(it, context, viewModel.getServiceByKey(it.key), isDarkTheme, onEdit = { subscription ->
                                     navController.navigate("add_subscription?id=${subscription.id}")
 
                                 }, onDelete = { subscription ->
@@ -444,16 +456,26 @@ fun openSubscription(context: Context, sub: Renewal) {
 
 
 @Composable
-fun EmptySubscriptionScreen(navController: NavController,isLoggedIn: Boolean, data: DashboardData?) {
+fun EmptySubscriptionScreen(
+    navController: NavController,
+    isAuthenticated: Boolean,
+    data: DashboardData?,
+    firebaseUser: FirebaseUser?,
+    guestPremiumOwned: Boolean,
+    isAppUserSignedIn: Boolean,
+    isDarkTheme: Boolean
+    ) {
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val isPremium = data?.user?.isPremium == true &&
+            (isAppUserSignedIn || guestPremiumOwned)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 40.dp, start = 12.dp, end = 12.dp),
+            .padding(top = 40.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Card(
             modifier = Modifier
@@ -473,8 +495,8 @@ fun EmptySubscriptionScreen(navController: NavController,isLoggedIn: Boolean, da
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                Color(0xFF1A237E),
-                                Color(0xFF4866F1)
+                                ThemeColors.getDarkBlueColor(isDarkTheme),
+                                ThemeColors.getPrimaryColor(isDarkTheme)
                             )
                         )
                     )
@@ -484,93 +506,81 @@ fun EmptySubscriptionScreen(navController: NavController,isLoggedIn: Boolean, da
 
                 Column(horizontalAlignment = Alignment.Start,
                     modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
-                    var firstName = "Guest"
-                    if(isLoggedIn){
-                        firstName = data?.user?.name
-                            ?.trim()
-                            ?.split(" ")
-                            ?.firstOrNull()
-                            ?: ""
-                    }
-                    Text(
-                        text = getGreeting(),
-                        color = colorResource(R.color.white),
-                        fontFamily = manropeExtraBold,
-                        fontSize = 30.sp
+                    val firstName = displayFirstName(
+                        profileName = data?.user?.name,
+                        firebaseDisplayName = firebaseUser?.displayName,
+                        isAuthenticated = isAuthenticated
                     )
-                    Text(
-                        text = firstName,
-                        color = colorResource(R.color.white),
-                        fontFamily = manropeExtraBold,
-                        fontSize = 30.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     data?.let {
-                        Row( modifier = Modifier.fillMaxWidth(),
+
+
+                        Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,) {
                             Text(
-                                text = "${data.subscriptions.size}/5 subscriptions",
-                                color = colorResource(R.color.white),
-                                fontFamily = manropeMedium,
-                                fontSize = 16.sp
-                            )
-                            Spacer(modifier = Modifier.width(20.dp))
-
-                            val infiniteTransition = rememberInfiniteTransition(label = "")
-                            val shimmer by infiniteTransition.animateFloat(
-                                initialValue = 0f,
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(1200, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = ""
+                                text = getGreeting(),
+                                color =ThemeColors.getTextColor(isDarkTheme),
+                                fontFamily = manropeExtraBold,
+                                fontSize = 20.sp
                             )
 
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(
-                                        brush = Brush.linearGradient(
-                                            colors = listOf(
-                                                Color(0xFF1A237E),
-                                                Color(0xFF3D5AFE),
-                                                Color(0xFF1A237E)
-                                            ),
-                                            start = Offset(0f, shimmer * 200f),
-                                            end = Offset(200f, shimmer * 400f)
-                                        )
-                                    )
-                                    .border(
-                                        1.dp,
-                                        Color.White.copy(alpha = 0.5f),
-                                        RoundedCornerShape(20.dp)
-                                    )
-                                    .clickable { navController.navigate("premium") }
-                                    .padding(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val isPremium = data.user?.isPremium == true &&
+                                    (isAppUserSignedIn || guestPremiumOwned)
 
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            if (isPremium) {
+                                PremiumTag()
+                            } else {
 
-                                    Text(
-                                        text = "Upgrade",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontFamily = manropeExtraBold
+                                if (data.subscriptions.size >= 4) {
+                                    val infiniteTransition = rememberInfiniteTransition(label = "")
+                                    val shimmer by infiniteTransition.animateFloat(
+                                        initialValue = 0f,
+                                        targetValue = 1f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(1200, easing = LinearEasing),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = ""
                                     )
 
-                                    Spacer(modifier = Modifier.width(4.dp))
-
-                                    // ✨ glitter emoji
-                                    Text("✨", fontSize = 12.sp)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(
+                                                brush = Brush.linearGradient(
+                                                    colors = listOf(
+                                                        ThemeColors.getDarkBlueColor(isDarkTheme),
+                                                        ThemeColors.getPrimaryColor(isDarkTheme),
+                                                        ThemeColors.getDarkBlueColor(isDarkTheme)
+                                                    ),
+                                                    start = Offset(0f, shimmer * 200f),
+                                                    end = Offset(200f, shimmer * 400f)
+                                                )
+                                            )
+                                            .border(
+                                                1.dp,
+                                                Color.White.copy(alpha = 0.5f),
+                                                RoundedCornerShape(20.dp)
+                                            )
+                                            .clickable { navController.navigate("premium") }
+                                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Upgrade",
+                                                color = Color.White,
+                                                fontSize = 12.sp,
+                                                fontFamily = manropeExtraBold
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("✨", fontSize = 12.sp)
+                                        }
+                                    }
                                 }
                             }
-
                         }
+
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = "You have ${data.upcomingRenewals.size} Subscriptions & ${data.freeTrials.size} FreeTrials",
@@ -580,11 +590,6 @@ fun EmptySubscriptionScreen(navController: NavController,isLoggedIn: Boolean, da
 
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-
-
-
-
-
 
                 }
             }

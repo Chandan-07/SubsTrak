@@ -19,6 +19,29 @@ import kotlin.math.abs
 import com.tracker.subscription.data.Service as Service1
 
 object Utility {
+
+    /**
+     * Resolves the first name for greetings. Prefers Room profile, then Firebase display name.
+     * Shows "Guest" only when the user is not signed in at all.
+     */
+    fun displayFirstName(
+        profileName: String?,
+        firebaseDisplayName: String? = null,
+        isAuthenticated: Boolean = false
+    ): String {
+        val fullName = listOfNotNull(
+            profileName?.takeIf { it.isNotBlank() && !it.equals("Guest", ignoreCase = true) },
+            firebaseDisplayName?.takeIf { it.isNotBlank() }
+        ).firstOrNull()
+
+        return fullName
+            ?.trim()
+            ?.split(" ")
+            ?.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: if (isAuthenticated) "" else "Guest"
+    }
+
     fun calculateNextBillingDate(
         startDate: Long,
         billingCycle: String,
@@ -66,10 +89,10 @@ object Utility {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
         return when (hour) {
-            in 5..11 -> "Good Morning ☀️, "
-            in 12..16 -> "Good Afternoon 🌤️, "
-            in 17..20 -> "Good Evening 🌇, "
-            else -> "Good Night 🌙, "
+            in 5..11 -> "Good Morning ☀️ "
+            in 12..16 -> "Good Afternoon 🌤️"
+            in 17..20 -> "Good Evening 🌇 "
+            else -> "Good Night 🌙"
         }
     }
 

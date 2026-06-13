@@ -29,6 +29,7 @@ import com.tracker.subscription.R
 import com.tracker.subscription.data.Renewal
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.screens.home.cards.RenewalItem
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,8 @@ import com.tracker.subscription.screens.home.cards.RenewalItem
     renewals: List<Renewal>?,
     onBack: () -> Unit,
     viewModel: DashboardViewModel,
-    navController: NavController
+    navController: NavController,
+    isDarkTheme: Boolean
 ) {
 
     val context = LocalContext.current
@@ -57,7 +59,7 @@ import com.tracker.subscription.screens.home.cards.RenewalItem
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint = colorResource(R.color.dark_blue)
+                        tint = ThemeColors.getDarkGreyColor(isDarkTheme)
                     )
                 }
 
@@ -67,7 +69,7 @@ import com.tracker.subscription.screens.home.cards.RenewalItem
 
                     Text(
                         title,
-                        color = colorResource(R.color.dark_blue),
+                        color = ThemeColors.getDarkGreyColor(isDarkTheme),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -88,7 +90,7 @@ import com.tracker.subscription.screens.home.cards.RenewalItem
                     RenewalItem(
                         renewal = renewal,
                         context,
-                        viewModel.getServiceByKey(renewal.key), onEdit = { subscription ->
+                        viewModel.getServiceByKey(renewal.key), isDarkTheme, onEdit = { subscription ->
                             navController.navigate("add_subscription?id=${subscription.id}")
 
                         }, onDelete = { subscription ->

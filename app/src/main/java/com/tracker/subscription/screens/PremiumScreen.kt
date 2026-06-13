@@ -21,15 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,29 +42,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
 import com.tracker.subscription.presentation.PremiumViewModel
+import com.tracker.subscription.ui.theme.ThemeColors
 
 
 @Composable
 fun PremiumPlanScreen(
     viewModel: PremiumViewModel,
-    onClose: () -> Unit
-){
+    isAppUserSignedIn: Boolean,
+    guestPremiumOwned: Boolean,
+    isDarkTheme: Boolean,
+    onClose: () -> Unit,
+    onPurchaseSuccess: () -> Unit = {}
+) {
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
-    val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
     val plans = viewModel.plans
     val selectedPlan = viewModel.selectedPlan
+    val isPurchasing = viewModel.isPurchasing
+    val isAlreadyPremium = viewModel.isAlreadyPremium
     val context = LocalContext.current
     val activity = context as Activity
 
-    LaunchedEffect(Unit) {
-        viewModel.loadPlans()
+    LaunchedEffect(isAppUserSignedIn, guestPremiumOwned) {
+        viewModel.loadPlans(
+            isAppUserSignedIn = isAppUserSignedIn,
+            guestPremiumOwned = guestPremiumOwned
+        )
+    }
+
+    LaunchedEffect(viewModel.purchaseSuccess) {
+        if (viewModel.purchaseSuccess) {
+            onPurchaseSuccess()
+            viewModel.resetPurchaseSuccess()
+        }
     }
     Box (
 
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F8FB))
+            .background(ThemeColors.getBackgroundColor(isDarkTheme))
     ) {
 
         Column(
@@ -85,10 +99,11 @@ fun PremiumPlanScreen(
                 Text(
                     text = "Unlock Premium",
                     fontFamily = manropeBold,
-                    fontSize = 28.sp
+                    fontSize = 28.sp,
+                    color = ThemeColors.getTextColor(isDarkTheme)
                 )
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = null)
+                    Icon(Icons.Default.Close, contentDescription = null, tint = ThemeColors.getTextColor(isDarkTheme))
                 }
             }
 
@@ -99,7 +114,7 @@ fun PremiumPlanScreen(
 
             Text(
                 text = "Get unlimited access to all features and take control of your subscriptions",
-                color = Color.Gray,
+                color = ThemeColors.getDarkGreyColor(isDarkTheme),
                 fontFamily = manropeRegular
             )
 
@@ -112,7 +127,8 @@ fun PremiumPlanScreen(
                         price = plan.price, // 🔥 dynamic price
                         subText = if (!plan.isYearly) "per month • Billed monthly" else null,
                         isSelected = selectedPlan == plan,
-                        tag = if (plan.isYearly) "SAVE 23%" else null
+                        tag = if (plan.isYearly) "SAVE 23%" else null,
+                        isDarkTheme = isDarkTheme
                     ) {
                         viewModel.selectedPlan = plan
                     }
@@ -124,12 +140,23 @@ fun PremiumPlanScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ⭐ Features
-            FeatureItem("∞", "Unlimited Subscriptions", "Add as many subscriptions as you want")
-            FeatureItem("🔔", "Unlimited Notifications", "Never miss a payment with smart reminders")
-            FeatureItem("📊", "Advanced Analytics", "Detailed insights and spending patterns")
-            FeatureItem( "⚡", "Take Actions Faster", "One step away to Unsubscribe")
+            FeatureItem("∞", "Unlimited Subscriptions", "Add as many subscriptions as you want", isDarkTheme)
+            FeatureItem("🔔", "Unlimited Notifications", "Never miss a payment with smart reminders", isDarkTheme)
+            FeatureItem("📊", "Advanced Analytics", "Detailed insights and spending patterns", isDarkTheme)
+            FeatureItem( "⚡", "Take Actions Faster", "One step away to Unsubscribe", isDarkTheme)
 
             Spacer(modifier = Modifier.weight(1f))
+
+            if (isAlreadyPremium) {
+                Text(
+                    text = "You're already a Premium member. Enjoy unlimited subscriptions!",
+                    color = Color(0xFF2ECC71),
+                    fontFamily = manropeRegular,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // 🚀 Continue Button
             Box(
@@ -139,18 +166,23 @@ fun PremiumPlanScreen(
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Color(0xFF2979FF), // blue
-                                Color(0xFF2979FF)  // light blue
+                                Color(0xFF2979FF),
+                                Color(0xFF2979FF)
                             )
                         ),
                         RoundedCornerShape(25.dp)
                     ),
-                contentAlignment = Alignment.BottomCenter
+                contentAlignment = Alignment.Center
             ) {
                 Button(
                     onClick = {
-                        viewModel.purchase(activity)
+                        if (isAlreadyPremium) {
+                            onClose()
+                        } else {
+                            viewModel.purchase(activity)
+                        }
                     },
+                    enabled = !isPurchasing && (plans.isNotEmpty() || isAlreadyPremium),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -159,7 +191,20 @@ fun PremiumPlanScreen(
                         containerColor = Color.Transparent
                     )
                 ) {
-                    Text("Continue",  color = Color.White, fontSize = 20.sp, fontFamily = manropeBold)
+                    if (isPurchasing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (isAlreadyPremium) "Done" else "Continue",
+                            color = ThemeColors.getTextColor(!isDarkTheme),
+                            fontSize = 20.sp,
+                            fontFamily = manropeBold
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -182,13 +227,14 @@ fun PlanCard(
     isSelected: Boolean,
     tag: String? = null,
     subText: String? = null,
+    isDarkTheme: Boolean,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(ThemeColors.getBackgroundColor(isDarkTheme))
             .border(
                 width = 2.dp,
                 color = if (isSelected) Color(0xFF5A5DF0) else Color(0xFFE0E0E0),
@@ -240,7 +286,8 @@ fun PlanCard(
 fun FeatureItem(
     icon: String,
     title: String,
-    desc: String
+    desc: String,
+    isDarkTheme: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -252,7 +299,7 @@ fun FeatureItem(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFEDEBFF)),
+                .background(ThemeColors.getCardBackgroundColor(isDarkTheme)),
             contentAlignment = Alignment.Center
         ) {
             Text(icon)
@@ -261,8 +308,8 @@ fun FeatureItem(
         Spacer(modifier = Modifier.width(12.dp))
 
         Column {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(desc, color = Color.Gray, fontSize = 12.sp)
+            Text(title, fontWeight = FontWeight.SemiBold, color = ThemeColors.getTextColor(isDarkTheme))
+            Text(desc,  fontSize = 12.sp, color = ThemeColors.getDarkGreyColor(isDarkTheme))
         }
     }
 }

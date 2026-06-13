@@ -47,9 +47,10 @@ class GoogleAuthHelper(
 
         return AuthUser(
             uid = user.uid,
-            name = account.displayName, // 🔥 IMPORTANT
-            email = account.email,
-            photo = account.photoUrl?.toString()
+            name = account.displayName?.takeIf { it.isNotBlank() }
+                ?: user.displayName?.takeIf { it.isNotBlank() },
+            email = account.email ?: user.email,
+            photo = account.photoUrl?.toString() ?: user.photoUrl?.toString()
         )
     }
 

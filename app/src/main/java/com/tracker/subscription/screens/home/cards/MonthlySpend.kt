@@ -48,9 +48,19 @@ import com.tracker.subscription.R
 import com.tracker.subscription.Utility.formatCurrency
 import com.tracker.subscription.Utility.getGreeting
 import com.tracker.subscription.data.DashboardData
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @Composable
-fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, amount: Double, navController: NavController) {
+fun MonthlySpendCard(
+    isLoggedIn: Boolean,
+    isAppUserSignedIn: Boolean,
+    guestPremiumOwned: Boolean,
+    data: DashboardData,
+    currency: String,
+    amount: Double,
+    navController: NavController,
+    isDarkTheme: Boolean
+) {
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     var isYearly  by remember {  mutableStateOf(false) }
@@ -74,10 +84,15 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                     .clip(RoundedCornerShape(30.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF1A237E),
-                                Color(0xFF4866F1)
-                            )
+                            colors = if (isDarkTheme) {
+                                listOf(
+                                    Color(0xFF181226),
+                                    Color(0xFF291E8A)
+                                )} else {
+                                listOf(
+                                    Color(0xFF1A237E),
+                                    Color(0xFF4866F1))
+                            }
                         )
                     )
                 ,
@@ -87,65 +102,76 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                 Column(horizontalAlignment = Alignment.Start,
                     modifier = Modifier.padding(horizontal = 15.dp, vertical = 15.dp)) {
 
+                    val isPremium = data.user?.isPremium == true &&
+                        (isAppUserSignedIn || guestPremiumOwned)
 
-                    Row( modifier = Modifier.fillMaxWidth().padding(start = 5.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 5.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "${data.subscriptions.size}/5 subscriptions",
+                            text = if (isPremium) {
+                                "${data.subscriptions.size} subscriptions"
+                            } else {
+                                "${data.subscriptions.size}/5 subscriptions"
+                            },
                             color = colorResource(R.color.white),
                             fontFamily = manropeMedium,
                             fontSize = 16.sp
                         )
-                        Spacer(modifier = Modifier.width(14.dp))
 
-                        val infiniteTransition = rememberInfiniteTransition(label = "")
-                        val shimmer by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 1f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1200, easing = LinearEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = ""
-                        )
+                        if (isPremium) {
+                            PremiumTag()
+                        } else {
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF1A237E),
-                                            Color(0xFF3D5AFE),
-                                            Color(0xFF1A237E)
-                                        ),
-                                        start = Offset(0f, shimmer * 200f),
-                                        end = Offset(200f, shimmer * 400f)
-                                    )
-                                )
-                                .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                                .clickable { navController.navigate("premium") }
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Text(
-                                    text = "Upgrade",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontFamily = manropeExtraBold
+                            if (data.subscriptions.size >= 4) {
+                                val infiniteTransition = rememberInfiniteTransition(label = "")
+                                val shimmer by infiniteTransition.animateFloat(
+                                    initialValue = 0f,
+                                    targetValue = 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(1200, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = ""
                                 )
 
-                                Spacer(modifier = Modifier.width(4.dp))
-
-                                // ✨ glitter emoji
-                                Text("✨", fontSize = 12.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color(0xFF1A237E),
+                                                    Color(0xFF3D5AFE),
+                                                    Color(0xFF1A237E)
+                                                ),
+                                                start = Offset(0f, shimmer * 200f),
+                                                end = Offset(200f, shimmer * 400f)
+                                            )
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Color.White.copy(alpha = 0.5f),
+                                            RoundedCornerShape(20.dp)
+                                        )
+                                        .clickable { navController.navigate("premium") }
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Upgrade",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontFamily = manropeExtraBold
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("✨", fontSize = 12.sp)
+                                    }
+                                }
                             }
                         }
-
                     }
 
 
@@ -155,13 +181,13 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                             .padding(top = 15.dp)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(30.dp))
-                            .background(Color(0xFFF2F7FD))
+                            .background(Color(if (isDarkTheme) 0xFF291E8A else 0xFFF2F7FD))
                         ,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(R.drawable.timer, "Free Trial", data.freeTrials.size)
-                        StatItem(R.drawable.text, "Active", data.subscriptions.size)
-                        StatItem(R.drawable.notification_bell, "Renewals", data.upcomingRenewals.size)
+                        StatItem(R.drawable.timer, "Free Trial", data.freeTrials.size, isDarkTheme)
+                        StatItem(R.drawable.text, "Active", data.subscriptions.size, isDarkTheme)
+                        StatItem(R.drawable.notification_bell, "Renewals", data.upcomingRenewals.size, isDarkTheme)
                     }
 
 
@@ -218,11 +244,11 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
                                 }
 
                                 // 💰 Animated Amount
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(top = 22.dp)) {
                                     val displayRounded = displayAmount.toInt()
                                     Text(
                                         text = formatCurrency(displayRounded.toDouble(), data.currency),
-                                        fontSize = 30.sp,
+                                        fontSize = 25.sp,
                                         fontFamily = manropeExtraBold,
                                         color = Color(0xFFFAF6F5)
                                     )
@@ -242,6 +268,66 @@ fun MonthlySpendCard(isLoggedIn: Boolean,data: DashboardData, currency: String, 
     }
 
 
+}
+
+@Composable
+fun PremiumTag() {
+    val manropeExtraBold = FontFamily(Font(R.font.manrope_extra_bold))
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFFFE082),
+                        Color(0xFFFFC400)
+                    )
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("👑", fontSize = 12.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Premium",
+                color = Color(0xFF1A237E),
+                fontSize = 12.sp,
+                fontFamily = manropeExtraBold
+            )
+        }
+    }
+}
+
+@Composable
+fun FreeTag(isDarkTheme: Boolean) {
+    val manropeExtraBold = FontFamily(Font(R.font.manrope_extra_bold))
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF70D067),
+                        Color(0xFF70D067)
+                    )
+                )
+            )
+            .border(0.2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Free",
+                color = ThemeColors.getTextColor(!isDarkTheme),
+                fontSize = 12.sp,
+                fontFamily = manropeExtraBold
+            )
+        }
+    }
 }
 @Composable
 fun ToggleItem(
@@ -274,7 +360,8 @@ fun ToggleItem(
 fun StatItem(
     emoji: Int,
     title: String,
-    count: Int
+    count: Int,
+    isDarkTheme: Boolean
 ) {
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
@@ -289,7 +376,7 @@ fun StatItem(
             modifier = Modifier
                 .size(30.dp) // circle size
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(ThemeColors.getBackgroundColor(isDarkTheme)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -306,13 +393,13 @@ fun StatItem(
         Text(
             text = title,
             fontSize = 12.sp,
-            color = Color.Black,
+            color = ThemeColors.getDarkGreyColor(isDarkTheme),
             fontFamily = manropeMedium
         )
         Text(
             text = count.toString(),
             fontSize = 18.sp,
-            color = Color.Black,
+            color = ThemeColors.getTextColor(isDarkTheme),
             fontFamily = manropeExtraBold
         )
     }

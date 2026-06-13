@@ -16,6 +16,7 @@ import com.tracker.subscription.data.dao.UserDao
 import com.tracker.subscription.data.dao.UserEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
 
@@ -641,18 +642,34 @@ class SubscriptionRepository(
                         uid = it.id,
                         name = it.name ?: "",
                         email = it.email ?: "",
-                        photo = it.logoResId ?: ""
+                        photo = it.logoResId ?: "",
+                        isPremium = it.isPremium
                     )
                 }
             }
     }
 
-    suspend fun saveUserDetails(userEntity: UserEntity){
-        userDao.insert(userEntity)
+    suspend fun getCurrentUserId(): String? = userDao.getCurrentUserId()
+
+    suspend fun saveUserDetails(userEntity: UserEntity) {
+        val existing = userDao.observeUser().firstOrNull()
+        val sameAccount = existing?.id == userEntity.id
+        userDao.insert(
+            userEntity.copy(
+                isPremium = (if (sameAccount) existing?.isPremium else false) == true,
+                purchaseToken = if (sameAccount) existing?.purchaseToken else null,
+                expiryTime = if (sameAccount) existing?.expiryTime else null
+            )
+        )
     }
 
-    suspend fun deleteSubData(){
+    suspend fun deleteSubData() {
         dao.deleteAll()
+    }
+
+    suspend fun clearUserProfile() {
+        userDao.deleteUser()
+        userDao.clearPremiumStatus()
     }
 
 

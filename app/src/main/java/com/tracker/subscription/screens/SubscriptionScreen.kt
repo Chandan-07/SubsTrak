@@ -56,11 +56,13 @@ import com.tracker.subscription.presentation.DashboardViewModelFactory
 import com.tracker.subscription.screens.home.DashboardUiState
 import com.tracker.subscription.screens.home.EmptySubscriptionScreen
 import com.tracker.subscription.screens.home.cards.SubscriptionItem
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @Composable
 fun SubscriptionScreen(
     isLoggedIn:Boolean,
     navController: NavController,
+    isDarkTheme: Boolean,
     onAddSubscription: () -> Unit = {}
 ){
 
@@ -95,12 +97,12 @@ fun SubscriptionScreen(
 
     Column(modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFFF5F6FA))
+        .background(ThemeColors.getBackgroundColor(isDarkTheme))
         .padding(horizontal = 25.dp)) {
         Spacer(modifier = Modifier.height(50.dp))
         Text(
             "My Subscriptions",
-            color = colorResource(R.color.dark_blue),
+            color = ThemeColors.getHeaderColor(isDarkTheme),
             fontSize = 24.sp,
             fontFamily = manropeExtraBold,
             modifier = Modifier
@@ -191,12 +193,12 @@ fun SubscriptionScreen(
                                         selectedCategory = category
                                         viewModel.filterByCategory(category)
                                     },
-                                    label = { Text(category, fontFamily = manropesemiBold, color = colorResource(R.color.dark_blue)) },
+                                    label = { Text(category, fontFamily = manropesemiBold, color = ThemeColors.getTextColor(isDarkTheme)) },
                                     shape = RoundedCornerShape(50), // 👈 MORE ROUNDED
                                     modifier = Modifier.padding(end = 15.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = colorResource(R.color.lime),
-                                        selectedLabelColor = Color.White
+                                        selectedContainerColor = ThemeColors.getOrangeColor(isDarkTheme),
+                                        selectedLabelColor = ThemeColors.getBackgroundColor(isDarkTheme)
                                     ),
                                     border = BorderStroke(0.7.dp, Color(0xFFD9D8D8))
                                 )
@@ -210,6 +212,7 @@ fun SubscriptionScreen(
                                 SubscriptionItem(
                                     sub = sub,
                                     viewModel.getServiceByKey(sub.key),
+                                    isDarkTheme = isDarkTheme,
                                     onEdit = { subscription ->
                                         navController.navigate("add_subscription?id=${subscription.id}")
                                     },

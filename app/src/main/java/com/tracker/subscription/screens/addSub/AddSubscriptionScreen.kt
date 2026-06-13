@@ -4,7 +4,15 @@ import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,6 +40,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -51,6 +60,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -82,6 +92,7 @@ import com.tracker.subscription.presentation.AddSubscriptionViewModelFactory
 import com.tracker.subscription.presentation.CommonOptions
 import com.tracker.subscription.presentation.Widgets.BillingChips
 import com.tracker.subscription.presentation.Widgets.SubTypeChip
+import com.tracker.subscription.ui.theme.ThemeColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -90,6 +101,7 @@ import java.util.Locale
 @Composable
 fun AddSubscriptionScreen(
     existingSubscription: Subscription? = null,
+    isDarkTheme: Boolean,
     onSave: (Subscription) -> Unit,
     onBack: () -> Unit
 ) {
@@ -116,7 +128,7 @@ fun AddSubscriptionScreen(
     }
     var currency by remember { mutableStateOf(existingSubscription?.currency?:"₹") }
 
-    var subscriptionType by remember { mutableStateOf(existingSubscription?.subscriptionType?: CommonOptions.subscriptionType.first().name) }
+    var subscriptionType by remember { mutableStateOf(existingSubscription?.subscriptionType?: CommonOptions.subscriptionType.last().name) }
 
     val currencyOptions = listOf(
         "₹", // INR
@@ -162,8 +174,9 @@ fun AddSubscriptionScreen(
     var reminderEnabled by remember { mutableStateOf(existingSubscription?.reminderEnabled ?: false) }
     var reminderDaysBefore by remember { mutableStateOf(existingSubscription?.reminderDaysBefore ?: 1) }
     var selectedPackage by remember { mutableStateOf<String?>(null) }
-    var showSheet by remember { mutableStateOf(true) }
+    var showSheet by remember { mutableStateOf(false) }
     var buttonEnabled by remember { mutableStateOf(price.isNotEmpty()) }
+
 
     LaunchedEffect(existingSubscription) {
 
@@ -178,13 +191,18 @@ fun AddSubscriptionScreen(
             reminderDaysBefore = it.reminderDaysBefore
             serviceLogo = it.logoResId ?: R.drawable.empty
         }
+        if (existingSubscription == null) {
+            showSheet = true
+        } else{
+            showSheet = false
+        }
     }
     val service = viewModel.getServiceLogo(serviceName)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = colorResource(R.color.white))
+            .background(color = ThemeColors.getBackgroundColor(isDarkTheme))
             .padding(start = 16.dp, end = 16.dp),
     ) {
         Box{
@@ -213,7 +231,7 @@ fun AddSubscriptionScreen(
                             "Add Subscription"
                         else
                             "Edit Subscription",
-                        color = colorResource(R.color.dark_blue),
+                        color = ThemeColors.getHeaderColor(isDarkTheme),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -248,12 +266,13 @@ fun AddSubscriptionScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showSheet = true }
+
                     ) {
                         SelectedServiceCard(
                             serviceName = serviceName.ifEmpty { "Ex: Netflix" }, // default or empty state
                             category = category, // you can map this
                             logoRes = service?.logo,
+                            isDarkTheme = isDarkTheme,
                             onClick = { showSheet = true }
                         )
                     }
@@ -265,6 +284,7 @@ fun AddSubscriptionScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 PriceSection(
+                    isDarkTheme = isDarkTheme,
                     price = price,
                     currency = currency,
                     currencyOptions = currencyOptions,
@@ -280,6 +300,7 @@ fun AddSubscriptionScreen(
                     selected = subscriptionType,
                     options = CommonOptions.subscriptionType,
                     isEmojiShow = false,
+                    isDarkTheme = isDarkTheme,
                     onSelected = { subscriptionType = it }
                 )
             }
@@ -294,6 +315,7 @@ fun AddSubscriptionScreen(
                         selected = billingCycle,
                             isFreeTrial = false,
                         options = CommonOptions.billing,
+                            isDarkTheme = isDarkTheme,
                         onSelected = { billingCycle = it }
                     )
                 } else {
@@ -302,6 +324,7 @@ fun AddSubscriptionScreen(
                             selected = freeTrialPeriod,
                             isFreeTrial = true,
                             options = CommonOptions.freeTrial,
+                            isDarkTheme = isDarkTheme,
                             onSelected = { freeTrialPeriod = it }
                             )
                     }
@@ -359,6 +382,7 @@ fun AddSubscriptionScreen(
 
                     ReminderToggle(
                         enabled = reminderEnabled,
+                        isDarkTheme = isDarkTheme,
                         onToggle = { reminderEnabled = it }
                     )
 
@@ -374,9 +398,10 @@ fun AddSubscriptionScreen(
                 Spacer(modifier = Modifier.height(30.dp))
 
                 ServicePickerBottomSheet(
-                    show = showSheet && existingSubscription == null,
+                    show = showSheet ,
                     onDismiss = { showSheet = false },
                     viewModel = viewModel,
+                    isDarkTheme = isDarkTheme,
                     onSelect = { service ->
                         serviceName = service.name
                         serviceLogo = service.logo
@@ -445,7 +470,7 @@ fun AddSubscriptionScreen(
                     }
                 }
             ) {
-                Text("Save Subscription", color = Color.White, fontSize = 20.sp, fontFamily = manropeBold)
+                Text("Save Subscription", color = ThemeColors.getTextColor(!isDarkTheme), fontSize = 20.sp, fontFamily = manropeBold)
             }
         }
     }
@@ -480,6 +505,7 @@ fun ServicePickerBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
     viewModel: AddSubscriptionViewModel,
+    isDarkTheme: Boolean,
     onSelect: (Service) -> Unit ) {
     if (!show)
         return
@@ -494,10 +520,19 @@ fun ServicePickerBottomSheet(
         sheetState = sheetState,
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = Color(0xFFFFFCFC)
+        containerColor = ThemeColors.getBackgroundColor(isDarkTheme),
     )
+
     {
-        ServicePickerContent(viewModel, onSelect, onDismiss)
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(screenHeight * 0.95f)
+        ) {
+            ServicePickerContent(viewModel,isDarkTheme, onSelect, onDismiss)
+        }
     }
 }
 
@@ -506,6 +541,7 @@ fun SelectedServiceCard(
     serviceName: String,
     category: String,
     logoRes: Int?,
+    isDarkTheme: Boolean,
     onClick: () -> Unit
 ) {
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
@@ -517,7 +553,7 @@ fun SelectedServiceCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFFE9EFFC))
+            .background(ThemeColors.getCardBackgroundColor(isDarkTheme))
             .clickable { onClick() }
             .padding(16.dp)
     ) {
@@ -531,7 +567,7 @@ fun SelectedServiceCard(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background( if (logoRes != null) Color.White else Utility.randomColor()) , // fallback bg
+                    .background( if (logoRes != null) ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme) else Utility.randomColor()) , // fallback bg
                 contentAlignment = Alignment.Center
             ) {
                 if (logoRes != null) {
@@ -543,7 +579,7 @@ fun SelectedServiceCard(
                 } else {
                     Text(
                         text = serviceName.take(1).uppercase(),
-                        color = Color.White,
+                        color = ThemeColors.getTextColor(isDarkTheme),
                         fontFamily = manropeBold,
                         fontSize = 30.sp
                     )
@@ -576,7 +612,7 @@ fun SelectedServiceCard(
                 text = "Change",
                 color = Color(0xFF2979FF),
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).padding(vertical = 4.dp, horizontal = 8.dp).clickable { onClick() }
+                modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme)).padding(vertical = 4.dp, horizontal = 8.dp).clickable { onClick() }
             )
         }
     }
@@ -585,11 +621,61 @@ fun SelectedServiceCard(
 @Composable
 fun ServicePickerContent(
     viewModel: AddSubscriptionViewModel,
+    isDarkTheme: Boolean,
     onSelect: (Service) -> Unit,
     onDismiss: () -> Unit,
     ) {
     var query by remember { mutableStateOf("") }
+
+    var showCreateSheet by remember {
+        mutableStateOf(false)
+    }
+    var currentScreen by remember {
+        mutableStateOf(ServiceSheetScreen.LIST)
+    }
+
+
+                ServiceListContent(
+                viewModel = viewModel,
+                currentScreen,
+                initialName = query,
+                    isDarkTheme = isDarkTheme,
+                onCreateService = {
+                    query = it
+                    currentScreen = ServiceSheetScreen.CREATE
+                },
+                onSelect = onSelect,
+                onDismiss = {
+                    showCreateSheet = false
+                    onDismiss()
+                },
+                onSave = { service ->
+
+                    showCreateSheet = false
+
+                    onSelect(service)
+
+                    onDismiss()
+                }
+
+            )
+
+}
+
+
+@Composable
+fun ServiceListContent (
+    viewModel: AddSubscriptionViewModel,
+    currentScreen: ServiceSheetScreen,
+    initialName: String,
+    isDarkTheme: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (Service) -> Unit,
+    onSave: (Service) -> Unit,
+    onCreateService: (String) -> Unit,
+){
     var selectedCategory by remember { mutableStateOf("All") }
+    var query by remember { mutableStateOf("") }
 
     val categories = listOf(
         "All", "OTT", "Music", "Productivity", "Shopping", "Fitness", "AI"
@@ -597,29 +683,72 @@ fun ServicePickerContent(
     val manropeRegular = FontFamily( Font(R.font.manrope_semi_bold) )
     val manropesemiBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+    val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val haptic = LocalHapticFeedback.current
+    var initialSearhed =  initialName
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.96f)
-            .padding(start = 18.dp, end = 18.dp)
-    ) {
+    var serviceName by remember {
+        mutableStateOf(initialName)
+    }
 
-        // 🔝 Header with close
-        Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Icon(Icons.Default.Close, contentDescription = null)
-            }
-        Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .padding(18.dp)
-    ) {
+    var category by remember {
+        mutableStateOf("Entertainment")
+    }
+
+    var colorCode by remember {
+        mutableStateOf("Entertainment")
+    }
+
+    val colors = listOf(
+        Color(0xFFEF5350),
+        Color(0xFFAB47BC),
+        Color(0xFF42A5F5),
+        Color(0xFF26A69A),
+        Color(0xFFFFA726)
+    )
+
+    val randomColor = remember {
+        colors.random()
+    }
+
+    AnimatedContent(
+        targetState = currentScreen,
+        transitionSpec = {
+            fadeIn(
+                animationSpec = tween(500)
+            ) + scaleIn(
+                initialScale = 0.8f
+            ) togetherWith
+                    fadeOut(
+                        animationSpec = tween(500)
+                    )
+        },
+        label = "sheet_transition"
+    ) { currentScreen ->
+
+        when(currentScreen) {
+            ServiceSheetScreen.LIST -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.96f)
+                        .padding(start = 18.dp, end = 18.dp)
+                ) {
+
+                    // 🔝 Header with close
+                    Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight()
+                                .padding(18.dp)
+                        ) {
 
 //        // Drag handle
 //        Box(
@@ -628,130 +757,343 @@ fun ServicePickerContent(
 //                .background(Color.Gray.copy(0.3f), RoundedCornerShape(50))
 //                .align(Alignment.CenterHorizontally)
 //        )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "Select your Service ✨",
-            fontFamily = manropeExtraBold,
-            fontSize = 22.sp,
-            modifier = Modifier.padding(bottom = 10.dp)
-        )
-        Spacer(Modifier.height(20.dp))
-
-        // 🔍 Search
-            OutlinedTextField(
-                value = query,
-                onValueChange = {
-                    query = it
-                    viewModel.searchServices(it)
-                },
-                placeholder = { Text("Search services...", fontFamily = manropeRegular) },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null)
-                },
-                shape = RoundedCornerShape(20.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Color.Transparent,
-                    disabledBorderColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-            )
-
-        Spacer(Modifier.height(12.dp))
-
-        // 🧩 Category chips
-        LazyRow {
-            items(categories) { category ->
-                FilterChip(
-                    selected = selectedCategory == category,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                        selectedCategory = category
-                        viewModel.filterByCategory(category)
-                    },
-                    label = { Text(category, fontFamily = manropesemiBold) },
-                    shape = RoundedCornerShape(50), // 👈 MORE ROUNDED
-                    modifier = Modifier.padding(end = 15.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF3D5AFE),
-                        selectedLabelColor = Color.White
-                    ),
-                    border = BorderStroke(0.7.dp, Color(0xFFD9D8D8))
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 🔥 GRID (key improvement)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-
-            items(viewModel.suggestions) { service ->
-
-                Card(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                        onSelect(service) },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = colorResource(R.color.light_grey)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth() // 👈 IMPORTANT
-                            .padding(vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally // 👈 CENTER
-                    ) {
-
-                        Box(
-                            modifier = Modifier
-                                .size(45.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF1F3F4)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(service.logo),
-                                contentDescription = null,
-                                modifier = Modifier.size(45.dp)
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "Select your Service ✨",
+                                fontFamily = manropeExtraBold,
+                                fontSize = 22.sp,
+                                modifier = Modifier.padding(bottom = 10.dp)
                             )
+                            Spacer(Modifier.height(20.dp))
+
+                            // 🔍 Search
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = {
+                                    query = it
+                                    viewModel.searchServices(it)
+                                },
+                                placeholder = { Text("Search services...", fontFamily = manropeRegular) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = null)
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedBorderColor = Color.Transparent,
+                                    disabledBorderColor = Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp)
+                                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                            )
+
+                            Spacer(Modifier.height(12.dp))
+
+                            // 🧩 Category chips
+                            LazyRow {
+                                items(categories) { category ->
+                                    FilterChip(
+                                        selected = selectedCategory == category,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                            selectedCategory = category
+                                            viewModel.filterByCategory(category)
+                                        },
+                                        label = { Text(category, fontFamily = manropesemiBold) },
+                                        shape = RoundedCornerShape(50), // 👈 MORE ROUNDED
+                                        modifier = Modifier.padding(end = 15.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = ThemeColors.getOrangeColor(isDarkTheme),
+                                            selectedLabelColor = ThemeColors.getTextColor(isDarkTheme)
+                                        ),
+                                        border = BorderStroke(0.7.dp, Color(0xFFD9D8D8))
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                            ) {
+
+                                // ✅ SERVICES AVAILABLE
+                                if (viewModel.suggestions.isNotEmpty()) {
+
+                                    items(viewModel.suggestions) { service ->
+
+                                        Card(
+                                            onClick = {
+                                                haptic.performHapticFeedback(
+                                                    HapticFeedbackType.VirtualKey
+                                                )
+
+                                                onSelect(service)
+                                            },
+                                            shape = RoundedCornerShape(24.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
+                                            ),
+                                            elevation = CardDefaults.cardElevation(
+                                                defaultElevation = 4.dp
+                                            ),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 12.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(45.dp)
+                                                        .clip(CircleShape)
+                                                        .background(ThemeColors.getCardBackgroundColor(isDarkTheme)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+
+                                                    Image(
+                                                        painter = painterResource(service.logo),
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(45.dp)
+                                                    )
+                                                }
+
+                                                Spacer(Modifier.height(8.dp))
+
+                                                Text(
+                                                    text = service.name,
+                                                    maxLines = 2,
+                                                    minLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontFamily = manropeRegular,
+                                                    fontSize = 10.sp,
+                                                    color = ThemeColors.getTextColor(isDarkTheme),
+                                                    modifier = Modifier.padding(horizontal = 5.dp),
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // ❌ NO RESULT FOUND
+                                else {
+
+                                    item(span = {
+                                        GridItemSpan(maxLineSpan)
+                                    }) {
+
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+
+                                            Icon(
+                                                painterResource(R.drawable.highest),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(40.dp),
+                                                tint = Color.Unspecified
+                                            )
+
+                                            Spacer(Modifier.height(16.dp))
+
+                                            Text(
+                                                text = "No Result Found",
+                                                fontFamily = manropeExtraBold,
+                                                fontSize = 14.sp
+                                            )
+
+                                            Spacer(Modifier.height(8.dp))
+
+                                            Text(
+                                                text = "Create your own custom service",
+                                                color = Color.Gray,
+                                                fontFamily = manropeRegular
+                                            )
+
+                                            Spacer(Modifier.height(24.dp))
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(
+                                                        Brush.horizontalGradient(
+                                                            listOf(
+                                                                Color(0xFF2979FF),
+                                                                Color(0xFF2979FF)
+                                                            )
+                                                        ),
+                                                        RoundedCornerShape(25.dp)
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ){
+                                                Button(
+                                                    onClick = {
+
+                                                        serviceName = query
+                                                        onCreateService(query)
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = Color.Transparent
+                                                    )) {
+                                                    Text("Create Service", fontFamily = manropeBold, fontSize = 18.sp)
+                                                }
+                                            }
+
+                                        }
+                                    }
+                                }
+                            }
+
                         }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Text(
-                            text = service.name,
-                            maxLines = 2,
-                            minLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            fontFamily = manropeRegular,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 5.dp),
-                            textAlign = TextAlign.Center // 👈 CENTER TEXT
-                        )
                     }
                 }
             }
+            ServiceSheetScreen.CREATE -> {
+
+                val manropeBold = FontFamily( Font(R.font.manrope_bold) )
+                val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
+                val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
+
+                Column(
+                    modifier = Modifier
+                        .padding(30.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .border(0.5.dp, colorResource(R.color.blue_bg_light), RoundedCornerShape(25.dp))
+                        .fillMaxWidth()
+                       ,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        text = "Create Service",
+                        fontSize = 22.sp,
+                        fontFamily = manropeBold
+                    )
+
+                    Spacer(Modifier.height(15.dp))
+
+                    // LOGO
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(randomColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Text(
+                            text = initialName
+                                .firstOrNull()
+                                ?.uppercase() ?: "S",
+                            color = ThemeColors.getTextColor(isDarkTheme),
+                            fontSize = 34.sp,
+                            fontFamily = manropeExtraBold
+                        )
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // SERVICE NAME
+                    OutlinedTextField(
+                        value = serviceName,
+                        onValueChange = {
+                            serviceName = it
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent,
+                            disabledBorderColor = Color.Transparent
+                        ),
+                        label = {
+                            Text("Service Name", fontFamily = manropeMedium, fontSize = 14.sp)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp).background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // CATEGORY
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {
+                            category = it
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent,
+                            disabledBorderColor = Color.Transparent
+                        ),
+                        label = {
+                            Text("Category", fontFamily = manropeMedium, fontSize = 14.sp)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp).background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                    )
+
+                    Spacer(Modifier.height(28.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 50.dp, end = 50.dp)
+                            .height(56.dp)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF2979FF),
+                                        Color(0xFF2979FF)
+                                    )
+                                ),
+                                RoundedCornerShape(25.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Button(
+                            onClick = {
+
+                                val service = Service(
+                                    name = serviceName,
+                                    logo = -1,
+                                    packageName = "",
+                                    category = category,
+                                    key = serviceName,
+                                    prices = emptyList()
+                                )
+
+                                onSave(service)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent
+                            )
+                        ) {
+                            Text("Save", fontSize = 20.sp, fontFamily = manropeBold )
+                        }
+                    }
 
 
-            // ➕ Add Custom Service (always visible)
-            item {
-                AddCustomServiceCard(query, onSelect)
+
+                    Spacer(Modifier.height(20.dp))
+                }
             }
-        } }
         }
     }
+
+
 }
 
 @Composable
@@ -799,9 +1141,31 @@ fun AddCustomServiceCard(
 
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateServiceBottomSheet(
+    initialName: String,
+    onDismiss: () -> Unit,
+    onSave: (Service) -> Unit
+) {
+
+
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(
+            topStart = 28.dp,
+            topEnd = 28.dp
+        )
+    ) {
+
+    }
+}
+
 
 @Composable
 fun PriceSection(
+    isDarkTheme: Boolean,
     price: String,
     currency: String,
     currencyOptions: List<String>,
@@ -830,14 +1194,15 @@ fun PriceSection(
         Row(
             horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.clip(
                 RoundedCornerShape(25.dp)
-            ).border(1.dp, colorResource(R.color.light_grey), RoundedCornerShape(25.dp))
+            ).border(1.dp, ThemeColors.getBackgroundColor(isDarkTheme), RoundedCornerShape(25.dp))
         ) {
             DropdownField(
                 label = "Currency",
                 selected = currency,
                 options = currencyOptions,
                 modifier = Modifier.width(95.dp),
-                onSelected = onCurrencySelected
+                onSelected = onCurrencySelected,
+                isDarkTheme = isDarkTheme
             )
 
             TextField(
@@ -855,15 +1220,15 @@ fun PriceSection(
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     // Background inside the text field
-                    focusedContainerColor = Color(0xFFFFFFFF),
-                    unfocusedContainerColor = Color(0xFFFFFFFF),
+                    focusedContainerColor = ThemeColors.getCardBackgroundColor(isDarkTheme),
+                    unfocusedContainerColor = ThemeColors.getCardBackgroundColor(isDarkTheme),
 
                     // Border colors
-                    focusedBorderColor = Color(0xFFFFFFFF),
-                    unfocusedBorderColor = Color(0xFFFDFDFD),
+                    focusedBorderColor = ThemeColors.getLightGreyColor(isDarkTheme),
+                    unfocusedBorderColor = ThemeColors.getLightGreyColor(isDarkTheme),
 
                     // Cursor
-                    cursorColor = Color(0xFF1976D2)
+                    cursorColor = ThemeColors.getTextColor(isDarkTheme)
                 ),
                 textStyle = TextStyle(fontFamily = manropeExtraBold, fontSize = 25.sp),
                 placeholder = { Text("Ex 399.00", fontSize = 25.sp, fontFamily = manropeExtraBold, color = colorResource(R.color.grey)) },
@@ -877,6 +1242,7 @@ fun PriceSection(
 @Composable
 fun ReminderToggle(
     enabled: Boolean,
+    isDarkTheme: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
 
@@ -919,13 +1285,13 @@ fun ReminderToggle(
             colors = SwitchDefaults.colors(
 
                 // When switch is ON
-                checkedThumbColor = Color.White,
+                checkedThumbColor = ThemeColors.getBackgroundColor(isDarkTheme),
                 checkedTrackColor = Color(0xFF1976D2),
 
                 // When switch is OFF
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFFCFD8DC),
-                uncheckedBorderColor = Color(0xFFA3CEFC)
+                uncheckedThumbColor = ThemeColors.getBackgroundColor(isDarkTheme),
+                uncheckedTrackColor = ThemeColors.getLightGreyColor(isDarkTheme),
+                uncheckedBorderColor = ThemeColors.getBackgroundColor(isDarkTheme)
             )
         )
     }
@@ -959,7 +1325,7 @@ private fun ReminderDaysBeforePicker(
             .padding(start = 8.dp, top = 12.dp) // align under text (icon on the left)
     ) {
         Text(
-            text = "Notify me ${options[selectedIndex]} day(s) before",
+            text = "Notify me ${options[selectedIndex]} days before",
             fontFamily = manropeBold,
             fontSize = 15.sp,
             color = Color(0xFF263238)
@@ -1014,7 +1380,8 @@ fun DropdownField(
     selected: String,
     options: List<String>,
     modifier: Modifier = Modifier,
-    onSelected: (String) -> Unit
+    onSelected: (String) -> Unit,
+    isDarkTheme: Boolean
 ) {
 
     var expanded by remember { mutableStateOf(false) }
@@ -1038,12 +1405,12 @@ fun DropdownField(
                 .fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 // Background inside the text field
-                focusedContainerColor = Color(0xFFFFFFFF),
-                unfocusedContainerColor = Color(0xFFFFFFFF),
+                focusedContainerColor = ThemeColors.getCardBackgroundColor(isDarkTheme),
+                unfocusedContainerColor = ThemeColors.getCardBackgroundColor(isDarkTheme),
 
                 // Border colors
-                focusedBorderColor = Color(0xFFFFFFFF),
-                unfocusedBorderColor = Color(0xFFFDFDFD),
+                focusedBorderColor = ThemeColors.getDarkGreyColor(isDarkTheme),
+                unfocusedBorderColor = ThemeColors.getLightGreyColor(isDarkTheme),
 
                 // Cursor
                 cursorColor = Color(0xFF1976D2)
@@ -1070,4 +1437,120 @@ fun DropdownField(
             }
         }
     }
+}
+
+@Composable
+fun CreateServiceDialog(
+    initialName: String,
+    isDarkTheme: Boolean,
+    onDismiss: () -> Unit,
+    onCreate: (Service) -> Unit
+) {
+
+    var serviceName by remember {
+        mutableStateOf(initialName)
+    }
+
+    var category by remember {
+        mutableStateOf("Entertainment")
+    }
+
+    val randomColor = remember {
+
+        listOf(
+            Color(0xFFEF5350),
+            Color(0xFFAB47BC),
+            Color(0xFF42A5F5),
+            Color(0xFF26A69A),
+            Color(0xFFFFA726)
+        ).random()
+    }
+
+    AlertDialog(
+
+        onDismissRequest = onDismiss,
+
+        confirmButton = {
+
+            Button(
+                onClick = {
+
+                    val service = Service(
+                        key = serviceName,
+                        name = serviceName,
+                        category = category,
+                        packageName = "",
+                        prices = emptyList(),
+                        logo = 0
+                    )
+
+                    onCreate(service)
+                }
+            ) {
+                Text("Create")
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancel")
+            }
+        },
+
+        title = {
+            Text("Create Service")
+        },
+
+        text = {
+
+            Column {
+
+                // LETTER ICON
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(randomColor),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    Text(
+                        text = serviceName
+                            .firstOrNull()
+                            ?.uppercase() ?: "?",
+                        color = ThemeColors.getTextColor(isDarkTheme),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                TextField(
+                    value = serviceName,
+                    onValueChange = {
+                        serviceName = it
+                    },
+                    label = {
+                        Text("Service Name")
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = category,
+                    onValueChange = {
+                        category = it
+                    },
+                    label = {
+                        Text("Category")
+                    }
+                )
+            }
+        }
+    )
 }

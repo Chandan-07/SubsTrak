@@ -59,6 +59,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.tracker.subscription.auth.GoogleAuthHelper
+import com.tracker.subscription.data.AuthUser
 import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.db.DatabaseProvider
@@ -78,10 +79,14 @@ import com.tracker.subscription.screens.onboard.OnboardingScreen
 import com.tracker.subscription.screens.PremiumPlanScreen
 import com.tracker.subscription.screens.ProfileScreen
 import com.tracker.subscription.screens.SubscriptionScreen
+import com.tracker.subscription.screens.addSub.SuccessScreen
 import com.tracker.subscription.screens.calendar.CalendarScreen
 import com.tracker.subscription.screens.home.DashboardUiState
 import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
+import com.tracker.subscription.ui.theme.SubscriptionTheme
+import com.tracker.subscription.ui.theme.ThemeColors
+import com.tracker.subscription.ui.theme.ThemeState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
 
@@ -128,6 +133,16 @@ class MainActivity : ComponentActivity() {
             val isLoggedIn by OnboardingPreference
                 .isLoggedIn(context)
                 .collectAsState(initial = false)
+                
+            val isDarkTheme by OnboardingPreference
+                .isDarkTheme(context)
+                .collectAsState(initial = false)
+            
+            var currentTheme by remember { mutableStateOf(isDarkTheme) }
+            
+            LaunchedEffect(isDarkTheme) {
+                currentTheme = isDarkTheme
+            }
 
 
             val navController = rememberNavController()
@@ -145,9 +160,64 @@ class MainActivity : ComponentActivity() {
             val repository = remember {
                 SubscriptionRepository(db.subscriptionDao(), db.userDao(), context, smsDataSource)
             }
+            val billingRepository = remember {
+                BillingRepository(context, db.userDao())
+            }
             val viewModel: DashboardViewModel = viewModel(
                 factory = DashboardViewModelFactory(repository)
             )
+
+            val guestPremiumOwned by OnboardingPreference
+                .isGuestPremiumOwned(context)
+                .collectAsState(initial = false)
+
+            val isAppUserSignedIn = BillingRepository.isAppUserSignedIn(
+                isLoggedIn = isLoggedIn,
+                firebaseUid = firebaseUser?.uid
+            )
+
+            LaunchedEffect(isLoggedIn, firebaseUser?.uid, guestPremiumOwned) {
+                scope.launch {
+                    val signedIn = BillingRepository.isAppUserSignedIn(
+                        isLoggedIn = isLoggedIn,
+                        firebaseUid = firebaseUser?.uid
+                    )
+                    if (signedIn) {
+                        billingRepository.syncPremiumFromPlay()
+                    } else if (!guestPremiumOwned) {
+                        billingRepository.clearPremiumOnSignOut()
+                    }
+                }
+            }
+
+            LaunchedEffect(isLoggedIn) {
+                viewModel.syncLoggedInState(isLoggedIn)
+            }
+
+            LaunchedEffect(firebaseUser?.uid) {
+                firebaseUser?.let { fb ->
+                    scope.launch {
+                        val previousUid = repository.getCurrentUserId()
+                        viewModel.persistAuthUser(
+                            AuthUser(
+                                uid = fb.uid,
+                                name = fb.displayName,
+                                email = fb.email,
+                                photo = fb.photoUrl?.toString()
+                            )
+                        )
+                        if (previousUid != null && previousUid != fb.uid) {
+                            billingRepository.onAccountSwitch()
+                        } else {
+                            billingRepository.syncPremiumFromPlay()
+                        }
+                        if (!isLoggedIn) {
+                            OnboardingPreference.setLoggedIn(context, true)
+                        }
+                        viewModel.syncLoggedInState(true)
+                    }
+                }
+            }
 
             if (onboardingCompleted == null || isAuthSkipped == null) {
                 Box1(
@@ -158,51 +228,60 @@ class MainActivity : ComponentActivity() {
                 }
                 return@setContent
             }
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
+            
+            SubscriptionTheme(
+                darkTheme = currentTheme,
+                dynamicColor = false,
+                themeState = ThemeState(isDarkTheme = currentTheme)
+            ) {
+                val bgColor = ThemeColors.getBackgroundColor(isDarkTheme)
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
-            Scaffold(bottomBar = {
-                AnimatedVisibility(
-                    visible = currentRoute in bottomBarRoutes,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
-                ) {
-                    NavigationBar(
-                        containerColor = Color.White,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                            .shadow(
-                                16.dp,
-                                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-                            )
+                Scaffold(
+                    containerColor = bgColor,
+                    bottomBar = {
+                    AnimatedVisibility(
+                        visible = currentRoute in bottomBarRoutes,
+                        enter = slideInVertically { it } + fadeIn(),
+                        exit = slideOutVertically { it } + fadeOut()
                     ) {
-                        bottomItems.forEach { item ->
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(item.icon),
-                                        contentDescription = item.label
-                                    )
-                                },
-                                selected = currentRoute == item.route,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo("dashboard")
-                                        launchSingleTop = true
-                                        restoreState = true   // 👈 important
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFF1565C0),
-                                    unselectedIconColor = Color.Gray,
-                                    indicatorColor = Color(0xFFE3F2FD)
+                        NavigationBar(
+                            containerColor = ThemeColors.getBackgroundColor(isDarkTheme),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .shadow(
+                                    16.dp,
+                                    RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                                 )
-                            )
+                        ) {
+                            bottomItems.forEach { item ->
+                                NavigationBarItem(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(item.icon),
+                                            contentDescription = item.label
+                                        )
+                                    },
+                                    selected = currentRoute == item.route,
+                                    onClick = {
+                                        navController.navigate(item.route) {
+                                            popUpTo("dashboard")
+                                            launchSingleTop = true
+                                            restoreState = true   // 👈 important
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color(0xFF1565C0),
+                                        unselectedIconColor = if (currentTheme) Color(0xFFB0B0B0) else Color.Gray,
+                                        indicatorColor = if (currentTheme) Color(0xFF424242) else Color(0xFFE3F2FD)
+                                    )
+                                )
+                            }
                         }
                     }
-                }
-            }) { innerPadding ->
+                }) { innerPadding ->
 
                 val bottomPadding by animateDpAsState(
                     targetValue = if (currentRoute in bottomBarRoutes) 80.dp else 20.dp,
@@ -248,11 +327,15 @@ class MainActivity : ComponentActivity() {
 
                                     try {
                                         val user = googleAuthClient.signInWithIntent(result.data!!)
-                                        viewModel.setUser(user)
-                                        scope.launch {
-                                            OnboardingPreference.setLoggedIn(context, true)
-                                            viewModel.setLoggedIn(true)
+                                        val previousUid = repository.getCurrentUserId()
+                                        viewModel.persistAuthUser(user)
+                                        if (previousUid != null && previousUid != user.uid) {
+                                            billingRepository.onAccountSwitch()
+                                        } else {
+                                            billingRepository.syncPremiumFromPlay()
                                         }
+                                        OnboardingPreference.setLoggedIn(context, true)
+                                        viewModel.syncLoggedInState(true)
                                         navController.navigate("dashboard")
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -298,21 +381,23 @@ class MainActivity : ComponentActivity() {
                         val state by viewModel.uiState.collectAsState()
 
                         DashboardScreen(
-                            isLoggedIn,
+                            viewModel = viewModel,
+                            isLoggedIn = isLoggedIn,
+                            firebaseUser = firebaseUser,
+                            guestPremiumOwned = guestPremiumOwned,
                             navController = navController,
                             onAddSubscription = {
+                                val dashboard = (state as? DashboardUiState.Success)?.data
+                                val subsCount = dashboard?.subscriptions?.size ?: 0
+                                val isPremium = dashboard?.user?.isPremium == true
 
-                                val subsCount = (state as? DashboardUiState.Success)
-                                    ?.data
-                                    ?.subscriptions
-                                    ?.size ?: 0
-
-                                if (subsCount == 5) {
+                                if (subsCount >= 5 && !isPremium) {
                                     navController.navigate("premium")
                                 } else {
                                     navController.navigate("add_subscription")
                                 }
-                            }
+                            },
+                            isDarkTheme = isDarkTheme
                         )
                     }
 
@@ -348,6 +433,7 @@ class MainActivity : ComponentActivity() {
 
                         AddSubscriptionScreen(
                             existingSubscription = subscription,
+                            isDarkTheme = isDarkTheme,
                             onSave = { entity ->
 
                                 if (id == -1) {
@@ -369,7 +455,7 @@ class MainActivity : ComponentActivity() {
                                     addSubViewModel.updateSubscription(entity)
                                 }
 
-                               navController.popBackStack()
+                                navController.navigate("success_screen")
                             }
                             ,
                             onBack = {
@@ -398,7 +484,8 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             },
                             viewModel,
-                            navController
+                            navController,
+                            isDarkTheme
                         )
                     }
 
@@ -422,7 +509,8 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             },
                             viewModel,
-                            navController
+                            navController,
+                            isDarkTheme
                         )
                     }
 
@@ -432,7 +520,7 @@ class MainActivity : ComponentActivity() {
                         exitTransition = {
                             fadeOut(animationSpec = tween(300))
                         }) {
-                        SubscriptionScreen(isLoggedIn, navController)
+                        SubscriptionScreen(isLoggedIn, navController, isDarkTheme)
                     }
 
                     composable("calender", enterTransition = {
@@ -441,7 +529,7 @@ class MainActivity : ComponentActivity() {
                         exitTransition = {
                             fadeOut(animationSpec = tween(300))
                         }) {
-                        CalendarScreen( navController)
+                        CalendarScreen( navController, isDarkTheme)
                     }
 
                     composable("premium",enterTransition = {
@@ -450,20 +538,33 @@ class MainActivity : ComponentActivity() {
                         exitTransition = {
                             slideOutHorizontally { it }
                         }) {
-                        val context = LocalContext.current
-
-                        val db = DatabaseProvider.getDatabase(context)
-
-
-                        val premiumRepository = remember {
-                            BillingRepository( context, db.userDao())
-                        }
+                        val premiumContext = LocalContext.current
                         val premiumViewModel: PremiumViewModel = viewModel(
-                            factory = PremiumViewModelFactory(premiumRepository)
+                            factory = PremiumViewModelFactory(billingRepository)
                         )
-                        PremiumPlanScreen(viewModel = premiumViewModel, onClose = {
-                            navController.popBackStack()
-                        })
+                        PremiumPlanScreen(
+                            viewModel = premiumViewModel,
+                            isAppUserSignedIn = isAppUserSignedIn,
+                            guestPremiumOwned = guestPremiumOwned,
+                            isDarkTheme = isDarkTheme,
+                            onClose = { navController.popBackStack() },
+                            onPurchaseSuccess = {
+                                scope.launch {
+                                    if (!isAppUserSignedIn) {
+                                        OnboardingPreference.setGuestPremiumOwned(
+                                            premiumContext,
+                                            true
+                                        )
+                                    }
+                                }
+                                Toast.makeText(
+                                    premiumContext,
+                                    "Welcome to Premium! Unlimited subscriptions unlocked.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                navController.popBackStack()
+                            }
+                        )
                     }
 
                     composable("profile", enterTransition = {
@@ -473,18 +574,30 @@ class MainActivity : ComponentActivity() {
                             fadeOut(animationSpec = tween(300))
                         }) {
 
-                        val isLoading = viewModel.isSigningIn
                         val coroutineScope = rememberCoroutineScope()
 
                         val googleAuthClient = remember {
                             GoogleAuthHelper(context)
                         }
                         val state by viewModel.uiState.collectAsState()
-                        val user = if (isLoggedIn) {
-                            (state as? DashboardUiState.Success)?.data?.user
-                        } else null
-                            ProfileScreen(
-                                user = user,
+                        val profileUser = (state as? DashboardUiState.Success)?.data?.user
+                            ?: firebaseUser?.let { fb ->
+                                AuthUser(
+                                    uid = fb.uid,
+                                    name = fb.displayName,
+                                    email = fb.email,
+                                    photo = fb.photoUrl?.toString()
+                                )
+                            }
+                        val isPremium = profileUser?.isPremium == true &&
+                                (isAppUserSignedIn || guestPremiumOwned)
+                        ProfileScreen(
+                                user = profileUser,
+                                isPremium = isPremium,
+                                isDarkTheme = currentTheme,
+                                onThemeToggle = { newTheme ->
+                                    currentTheme = newTheme
+                                },
                                 onSignOut = {
                                     viewModel.setLoading(true)
 
@@ -492,28 +605,22 @@ class MainActivity : ComponentActivity() {
                                         try {
                                             googleAuthClient.signOut()
                                             FirebaseAuth.getInstance().signOut()
+                                            billingRepository.clearPremiumOnSignOut()
+                                            OnboardingPreference.setGuestPremiumOwned(context, false)
                                             OnboardingPreference.setLoggedIn(context, false)
-                                            viewModel.setLoggedIn(false)
+                                            viewModel.onSignOut()
                                             navController.navigate("auth") {
                                                 popUpTo(0)
                                             }
 
                                         } catch (e: Exception) {
-
-                                            // 🔥 Show error
                                             Toast.makeText(
                                                 context,
                                                 "Something went wrong. Please try again.",
                                                 Toast.LENGTH_SHORT
                                             ).show()
-
                                         } finally {
-                                            Toast.makeText(
-                                                context,
-                                                "Something went wrong. Please try again.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            viewModel.setLoading(false) // ✅ always stop loading
+                                            viewModel.setLoading(false)
                                         }
                                     }
                                 },
@@ -524,9 +631,19 @@ class MainActivity : ComponentActivity() {
 
                     }
 
+                        composable("success_screen", enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                            exitTransition = {
+                                fadeOut(animationSpec = tween(300))
+                            }) {
+                            SuccessScreen(navController, isDarkTheme)
+                        }
 
                 }
 
+
+            }
             }
 
         }

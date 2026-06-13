@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ========== LIGHT THEME COLORS ========== -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -15,9 +16,32 @@
     <color name="dark_grey">#79797C</color>
     <color name="text_grey">#B7B7BC</color>
     <color name="blue_bg_light">#DDF1FB</color>
-    <color name="dark_blue">#053192</color>
+    <color name="blue_light">#EBEDFB</color>
     <color name="lime">#E5E106</color>
     <color name="orrange">#FF9800</color>
     <color name="orange">#FF5722</color>
     <color name="red">#F50057</color>
+
+    <!-- ========== DARK THEME COLORS ========== -->
+    <color name="dark_purple_200">#FF9575CD</color>
+    <color name="dark_purple_500">#FFBB86FC</color>
+    <color name="dark_purple_700">#FFD0BCFF</color>
+    <color name="dark_blue">#FF64B5F6</color>
+    <color name="dark_blue_text">#FFFFFFFF</color>
+    <color name="dark_teal_200">#FF80DEEA</color>
+    <color name="dark_teal_700">#FF4DD0E1</color>
+    <color name="dark_black">#FF000000</color>
+    <color name="dark_white">#FFFFFFFF</color>
+    <color name="dark_blue_bg">#FF1A237E</color>
+    <color name="dark_light_grey">#FF424242</color>
+    <color name="dark_grey_color">#FF757575</color>
+    <color name="dark_dark_grey">#FFBDBDBD</color>
+    <color name="dark_text_grey">#FF9E9E9E</color>
+    <color name="dark_blue_bg_light">#FF1565C0</color>
+    <color name="dark_blue_light">#FF1976D2</color>
+    <color name="dark_dark_blue">#FF90CAF9</color>
+    <color name="dark_lime">#FFCDDC39</color>
+    <color name="dark_orange">#FFFFB74D</color>
+    <color name="dark_orange_dark">#FFFF7043</color>
+    <color name="dark_red">#FFEF5350</color>
 </resources>

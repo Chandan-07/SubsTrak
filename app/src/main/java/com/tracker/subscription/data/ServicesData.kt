@@ -21,7 +21,8 @@ data class AuthUser(
     val uid: String,
     val name: String?,
     val email: String?,
-    val photo: String?
+    val photo: String?,
+    val isPremium: Boolean = false
 )
 
 data class ParsedSubscription(
