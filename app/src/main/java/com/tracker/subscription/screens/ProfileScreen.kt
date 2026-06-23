@@ -97,10 +97,6 @@ fun ProfileScreen(
                 color = textColor,
                 modifier = Modifier.padding(start = 26.dp)
             )
-
-//            IconButton(onClick = { /* settings */ }) {
-//                Icon(Icons.Default.Settings, contentDescription = null)
-//            }
         }
 
         Spacer(Modifier.height(40.dp))
@@ -469,7 +465,7 @@ fun ProfileCard(user: AuthUser, isDarkTheme: Boolean) {
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = ThemeColors.getBackgroundColor(isDarkTheme),
                         checkedThumbColor = ThemeColors.getBlueLightColor(isDarkTheme),
-                        uncheckedThumbColor = Color(0xFFB0B0B0)
+                        uncheckedThumbColor = Color(0xFF303F9F)
                     )
                 )
             }

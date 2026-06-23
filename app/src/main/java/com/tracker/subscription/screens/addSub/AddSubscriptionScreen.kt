@@ -3,6 +3,7 @@ package com.tracker.subscription.screens.addSub
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -190,6 +191,7 @@ fun AddSubscriptionScreen(
             reminderEnabled = it.reminderEnabled
             reminderDaysBefore = it.reminderDaysBefore
             serviceLogo = it.logoResId ?: R.drawable.empty
+            subscriptionType = it.subscriptionType
         }
         if (existingSubscription == null) {
             showSheet = true
@@ -218,7 +220,7 @@ fun AddSubscriptionScreen(
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint = colorResource(R.color.dark_blue)
+                        tint = ThemeColors.getTextColor(isDarkTheme)
                     )
                 }
 
@@ -357,7 +359,7 @@ fun AddSubscriptionScreen(
                                 onValueChange = {},
                                 readOnly = true,
                                 enabled = false,
-                                textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, fontFamily = manropeMedium),
+                                textStyle = TextStyle(color = ThemeColors.getTextColor(isDarkTheme), fontSize = 16.sp, fontFamily = manropeMedium),
                                 colors = OutlinedTextFieldDefaults.colors(
 
                                     // Background inside the text field
@@ -390,6 +392,7 @@ fun AddSubscriptionScreen(
                         Spacer(modifier = Modifier.height(10.dp))
                         ReminderDaysBeforePicker(
                             selectedDays = reminderDaysBefore,
+                            isDarkTheme,
                             onSelected = { reminderDaysBefore = it }
                         )
                     }
@@ -567,7 +570,7 @@ fun SelectedServiceCard(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background( if (logoRes != null) ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme) else Utility.randomColor()) , // fallback bg
+                    .background(if (logoRes != null) ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme) else Utility.randomColor()) , // fallback bg
                 contentAlignment = Alignment.Center
             ) {
                 if (logoRes != null) {
@@ -612,7 +615,11 @@ fun SelectedServiceCard(
                 text = "Change",
                 color = Color(0xFF2979FF),
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme)).padding(vertical = 4.dp, horizontal = 8.dp).clickable { onClick() }
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme))
+                    .padding(vertical = 4.dp, horizontal = 8.dp)
+                    .clickable { onClick() }
             )
         }
     }
@@ -736,7 +743,9 @@ fun ServiceListContent (
                 ) {
 
                     // 🔝 Header with close
-                    Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp)) {
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier.align(Alignment.TopEnd)
@@ -786,7 +795,10 @@ fun ServiceListContent (
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
-                                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                                    .background(
+                                        Color.LightGray.copy(alpha = 0.2f),
+                                        RoundedCornerShape(20.dp)
+                                    )
                             )
 
                             Spacer(Modifier.height(12.dp))
@@ -855,7 +867,11 @@ fun ServiceListContent (
                                                     modifier = Modifier
                                                         .size(45.dp)
                                                         .clip(CircleShape)
-                                                        .background(ThemeColors.getCardBackgroundColor(isDarkTheme)),
+                                                        .background(
+                                                            ThemeColors.getCardBackgroundColor(
+                                                                isDarkTheme
+                                                            )
+                                                        ),
                                                     contentAlignment = Alignment.Center
                                                 ) {
 
@@ -968,7 +984,11 @@ fun ServiceListContent (
                     modifier = Modifier
                         .padding(30.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .border(0.5.dp, colorResource(R.color.blue_bg_light), RoundedCornerShape(25.dp))
+                        .border(
+                            0.5.dp,
+                            colorResource(R.color.blue_bg_light),
+                            RoundedCornerShape(25.dp)
+                        )
                         .fillMaxWidth()
                        ,
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -1019,7 +1039,13 @@ fun ServiceListContent (
                         label = {
                             Text("Service Name", fontFamily = manropeMedium, fontSize = 14.sp)
                         },
-                        modifier = Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp).background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 15.dp, end = 15.dp)
+                            .background(
+                                Color.LightGray.copy(alpha = 0.2f),
+                                RoundedCornerShape(20.dp)
+                            )
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -1039,7 +1065,13 @@ fun ServiceListContent (
                         label = {
                             Text("Category", fontFamily = manropeMedium, fontSize = 14.sp)
                         },
-                        modifier = Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp).background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 15.dp, end = 15.dp)
+                            .background(
+                                Color.LightGray.copy(alpha = 0.2f),
+                                RoundedCornerShape(20.dp)
+                            )
                     )
 
                     Spacer(Modifier.height(28.dp))
@@ -1192,9 +1224,15 @@ fun PriceSection(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(
-            horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.clip(
-                RoundedCornerShape(25.dp)
-            ).border(1.dp, ThemeColors.getBackgroundColor(isDarkTheme), RoundedCornerShape(25.dp))
+            horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier
+                .clip(
+                    RoundedCornerShape(25.dp)
+                )
+                .border(
+                    1.dp,
+                    ThemeColors.getBackgroundColor(isDarkTheme),
+                    RoundedCornerShape(25.dp)
+                )
         ) {
             DropdownField(
                 label = "Currency",
@@ -1311,6 +1349,7 @@ fun requestNotificationPermission(context: Context) {
 @Composable
 private fun ReminderDaysBeforePicker(
     selectedDays: Int,
+    isDarkTheme: Boolean,
     onSelected: (Int) -> Unit
 ) {
     val options = remember { listOf(1, 2, 3, 5, 7) }
@@ -1328,7 +1367,7 @@ private fun ReminderDaysBeforePicker(
             text = "Notify me ${options[selectedIndex]} days before",
             fontFamily = manropeBold,
             fontSize = 15.sp,
-            color = Color(0xFF263238)
+            color = ThemeColors.getTextColor(isDarkTheme)
         )
         Spacer(modifier = Modifier.height(6.dp))
         Slider(
@@ -1356,7 +1395,7 @@ private fun ReminderDaysBeforePicker(
                     text = "${d}d",
                     fontFamily = manropeRegular,
                     fontSize = 11.sp,
-                    color = if (d == options[selectedIndex]) Color(0xFF1976D2) else Color.Gray
+                    color = if (d == options[selectedIndex]) Color(0xFFFFD600) else Color.Gray
                 )
             }
         }

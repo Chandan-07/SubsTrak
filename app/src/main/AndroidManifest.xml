@@ -16,6 +16,8 @@
         <package android:name="com.twitter.android" />
         <package android:name="com.adobe.psmobile" />
         <package android:name="com.discovery.discoveryplus.mobile" />
+        <package android:name="com.openai.chatgpt" />
+
     </queries>
     <application
         android:allowBackup="true"

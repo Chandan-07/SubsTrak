@@ -419,14 +419,6 @@ fun openSubscription(context: Context, sub: Renewal) {
     val packageName = sub.packageName
     if (!packageName.isNullOrEmpty()) {
 
-        val launchIntent = context.packageManager
-            .getLaunchIntentForPackage(packageName)
-
-        if (launchIntent != null) {
-            context.startActivity(launchIntent)
-            return
-        }
-
         // fallback → Play Store
         try {
             context.startActivity(
@@ -519,7 +511,7 @@ fun EmptySubscriptionScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,) {
                             Text(
                                 text = getGreeting(),
-                                color =ThemeColors.getTextColor(isDarkTheme),
+                                color = Color.White,
                                 fontFamily = manropeExtraBold,
                                 fontSize = 20.sp
                             )
@@ -585,6 +577,7 @@ fun EmptySubscriptionScreen(
                         Text(
                             text = "You have ${data.upcomingRenewals.size} Subscriptions & ${data.freeTrials.size} FreeTrials",
                             color = colorResource(R.color.white),
+                            fontSize = 14.sp,
                             fontFamily = manropeMedium,
                         )
 
@@ -611,7 +604,7 @@ fun EmptySubscriptionScreen(
         Text(
             "No Subscriptions Yet",
             style = MaterialTheme.typography.titleLarge,
-            color = colorResource(R.color.dark_blue),
+            color = ThemeColors.getDarkBlueColor(isDarkTheme),
             fontSize = 26.sp,
             fontWeight = FontWeight.SemiBold
         )

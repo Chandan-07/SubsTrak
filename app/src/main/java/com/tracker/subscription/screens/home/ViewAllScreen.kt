@@ -1,5 +1,6 @@
 package com.tracker.subscription.screens.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,17 +21,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.tracker.subscription.R
 import com.tracker.subscription.data.Renewal
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.screens.home.cards.RenewalItem
 import com.tracker.subscription.ui.theme.ThemeColors
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
  fun ViewAllScreen(
     title: String,
@@ -44,9 +41,8 @@ import com.tracker.subscription.ui.theme.ThemeColors
 
     val context = LocalContext.current
 
-    Column {
+    Column(modifier = Modifier.background(ThemeColors.getBlueBgColor(isDarkTheme)).fillMaxSize()) {
         Box{
-
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -69,7 +65,7 @@ import com.tracker.subscription.ui.theme.ThemeColors
 
                     Text(
                         title,
-                        color = ThemeColors.getDarkGreyColor(isDarkTheme),
+                        color = ThemeColors.getTextColor(isDarkTheme),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
