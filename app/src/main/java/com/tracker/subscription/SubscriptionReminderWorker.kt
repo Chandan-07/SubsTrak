@@ -2,13 +2,10 @@ package com.tracker.subscription
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Log
-import androidx.compose.material3.Icon
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -48,13 +45,14 @@ class SubscriptionReminderWorker(
         Log.d("SDFS", "doWork: "+remindBefore)
         if (daysLeft in 0..remindBefore) {
             showNotification(
-                id,
-                sub.name,
-                sub.price,
-                sub.subscriptionType,
-                daysLeft,
-                sub.logoResId
-            )        }
+                id = id,
+                name = sub.name,
+                price = sub.price,
+                subscriptionType = sub.subscriptionType,
+                daysLeft = daysLeft,
+                icon = sub.logoResId
+            )
+        }
         if (daysLeft < -2) return Result.success()
 
         if (daysLeft > 0) {
@@ -160,30 +158,25 @@ class SubscriptionReminderWorker(
         }
 
 
-        val intent = Intent(applicationContext, MainActivity::class.java)
-
-        val pendingIntent = PendingIntent.getActivity(
-            applicationContext,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val contentIntent = SubscriptionNotificationHelper.contentPendingIntent(
+            context = applicationContext,
+            subscriptionId = id
         )
 
-        val notification =
-            NotificationCompat.Builder(applicationContext, channelId)
-                .setSmallIcon(icon?: R.drawable.ic_launcher)
-                .setLargeIcon(
-                    BitmapFactory.decodeResource(
-                        applicationContext.resources,
-                        icon ?: R.drawable.ic_launcher
-                    )
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
+            .setSmallIcon(icon ?: R.drawable.ic_launcher)
+            .setLargeIcon(
+                BitmapFactory.decodeResource(
+                    applicationContext.resources,
+                    icon ?: R.drawable.ic_launcher
                 )
-                .setContentTitle(title)
-                .setContentText(message)
-                .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .build()
+            )
+            .setContentTitle(title)
+            .setContentText(message)
+            .setContentIntent(contentIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
 
         manager.notify(id, notification)
     }

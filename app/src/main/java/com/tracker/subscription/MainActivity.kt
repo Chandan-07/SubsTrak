@@ -1,6 +1,7 @@
 package com.tracker.subscription
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -82,6 +83,7 @@ import com.tracker.subscription.screens.SubscriptionScreen
 import com.tracker.subscription.screens.addSub.SuccessScreen
 import com.tracker.subscription.screens.calendar.CalendarScreen
 import com.tracker.subscription.screens.home.DashboardUiState
+import com.tracker.subscription.screens.home.cards.SubscriptionOptionsSheet
 import com.tracker.subscription.screens.home.ViewAllScreen
 import com.tracker.subscription.ui.data.BottomNavItem
 import com.tracker.subscription.ui.theme.SubscriptionTheme
@@ -92,9 +94,11 @@ import androidx.compose.foundation.layout.Box as Box1
 
 class MainActivity : ComponentActivity() {
 
+    private val notificationIntentState = mutableStateOf<Intent?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        notificationIntentState.value = intent
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(
@@ -194,6 +198,23 @@ class MainActivity : ComponentActivity() {
                 viewModel.syncLoggedInState(isLoggedIn)
             }
 
+            val notificationIntent by notificationIntentState
+            LaunchedEffect(notificationIntent, onboardingCompleted) {
+                val intent = notificationIntent ?: return@LaunchedEffect
+                if (onboardingCompleted != true) return@LaunchedEffect
+                if (!SubscriptionNotificationHelper.shouldShowOptionsSheet(intent)) return@LaunchedEffect
+
+                SubscriptionNotificationHelper.subscriptionIdFrom(intent)?.let { subscriptionId ->
+                    navController.navigate("dashboard") {
+                        popUpTo("dashboard") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                    viewModel.showOptionsSheetForSubscription(subscriptionId)
+                }
+                SubscriptionNotificationHelper.clearNotificationExtras(intent)
+                notificationIntentState.value = null
+            }
+
             LaunchedEffect(firebaseUser?.uid) {
                 firebaseUser?.let { fb ->
                     scope.launch {
@@ -237,7 +258,9 @@ class MainActivity : ComponentActivity() {
                 val bgColor = ThemeColors.getBackgroundColor(isDarkTheme)
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                val optionsSheetRenewal by viewModel.optionsSheetRenewal.collectAsState()
 
+                Box1(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     containerColor = bgColor,
                     bottomBar = {
@@ -641,12 +664,25 @@ class MainActivity : ComponentActivity() {
                         }
 
                 }
+                }
 
-
-            }
+                optionsSheetRenewal?.let { renewal ->
+                    SubscriptionOptionsSheet(
+                        renewal = renewal,
+                        isDarkTheme = isDarkTheme,
+                        onDismiss = { viewModel.dismissOptionsSheet() }
+                    )
+                }
+                }
             }
 
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        notificationIntentState.value = intent
     }
 }
 

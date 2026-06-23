@@ -57,7 +57,7 @@ object ThemeColors {
     }
 
     fun getGreyColor(isDarkTheme: Boolean): Color {
-        return if (isDarkTheme) DarkGrey else LightGrey
+        return if (isDarkTheme) DarkGrey else DarkGrey
     }
 
     fun getDarkGreyColor(isDarkTheme: Boolean): Color {

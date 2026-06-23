@@ -87,14 +87,15 @@ fun MonthlySpendCard(
                             colors = if (isDarkTheme) {
                                 listOf(
                                     Color(0xFF181226),
-                                    Color(0xFF291E8A)
+                                    Color(0xFF1F158A)
                                 )} else {
                                 listOf(
                                     Color(0xFF1A237E),
                                     Color(0xFF4866F1))
                             }
                         )
-                    )
+                    ).border(1.dp, Color(0xFFB5AEFF).copy(alpha = 0.2f), RoundedCornerShape(30.dp))
+
                 ,
                 contentAlignment = Alignment.TopStart
             ) {
@@ -181,7 +182,8 @@ fun MonthlySpendCard(
                             .padding(top = 15.dp)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(30.dp))
-                            .background(Color(if (isDarkTheme) 0xFF291E8A else 0xFFF2F7FD))
+                            .background(Color(if (isDarkTheme) 0xFF181226 else 0xFFF2F7FD))
+                            .border(0.5.dp, Color(0xFFB5AEFF).copy(alpha = 0.2f), RoundedCornerShape(30.dp))
                         ,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
@@ -227,18 +229,20 @@ fun MonthlySpendCard(
                                     Row(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(50))
-                                            .background(Color.White)
-                                            .padding(4.dp)
+                                            .background(if (isDarkTheme)Color.Black else  Color(0xFFFBFBFC))
+                                            .padding(2.dp)
                                     ) {
 
                                         ToggleItem(
                                             text = "Monthly",
-                                            selected = !isYearly
+                                            selected = !isYearly,
+                                            isDarkTheme
                                         ) { isYearly = false }
 
                                         ToggleItem(
                                             text = "Yearly",
-                                            selected = isYearly
+                                            selected = isYearly,
+                                            isDarkTheme
                                         ) { isYearly = true }
                                     }
                                 }
@@ -333,6 +337,7 @@ fun FreeTag(isDarkTheme: Boolean) {
 fun ToggleItem(
     text: String,
     selected: Boolean,
+    isDarkTheme: Boolean,
     onClick: () -> Unit
 ) {
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
@@ -342,10 +347,30 @@ fun ToggleItem(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(
-                if (selected) Color(0xFFFFC400) else Color.Transparent
+                if (selected) Brush.linearGradient(
+                    colors =  if (isDarkTheme) {listOf(
+                        Color(0xFF7E66EC),
+                        Color(0xFF051EE7)
+                    )} else {
+                        listOf(
+                            Color(0xFFEF830E),
+                            Color(0xFFCEAC05)
+                        )
+                    }
+                ) else Brush.linearGradient(
+                    colors = if (isDarkTheme) {listOf(
+                        Color.Black,
+                        Color.Black
+                    )} else {
+                        listOf(
+                            Color(0xFFFBFBFC),
+                            Color(0xFFFBFBFC)
+                        )
+                    }
+                )
             )
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 3.dp)
     ) {
         Text(
             text = text,
@@ -374,9 +399,11 @@ fun StatItem(
 
         Box(
             modifier = Modifier
-                .size(30.dp) // circle size
+                .size(45.dp) // circle size
                 .clip(CircleShape)
-                .background(ThemeColors.getBackgroundColor(isDarkTheme)),
+                .background(ThemeColors.getBackgroundColor(isDarkTheme))
+                .border(0.5.dp, Color(0xFFB5AEFF).copy(alpha = 0.2f), CircleShape)
+                .padding(2.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(

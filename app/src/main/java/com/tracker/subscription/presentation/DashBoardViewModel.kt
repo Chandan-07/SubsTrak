@@ -96,7 +96,10 @@ class DashboardViewModel(
                         startDate = it.startDate,
                         reminderEnabled = it.reminderEnabled,
                         reminderDaysBefore = it.reminderDaysBefore,
-                        freeTrialPeriod = it.freeTrialPeriod
+                        freeTrialPeriod = it.freeTrialPeriod,
+                        packageName = allServices
+                            .firstOrNull { filter -> it.name == filter.name }
+                            ?.packageName ?: "",
                     )
                 }
 
@@ -119,6 +122,9 @@ class DashboardViewModel(
                                 logoResId = it.logoResId,
                                 key = it.key,
                                 currency = it.currency,
+                                packageName = allServices
+                                    .firstOrNull { filter -> it.name == filter.name }
+                                    ?.packageName ?: "",
                                 nextBillingDate = it.nextBillingDate
                             )
                         }
@@ -153,7 +159,7 @@ class DashboardViewModel(
                         freeTrials = freeTrialList,
                         user = user, // ✅ FIXED
                         smsSuggestions = smsSyncState.value,
-                        isLoggedIn = isLoggedIn.value
+                        isLoggedIn = isLoggedIn.value,
                     )
                 )
             }.collect { dashboardData ->
@@ -231,6 +237,33 @@ class DashboardViewModel(
         }
     }
 
+
+    private val _optionsSheetRenewal = MutableStateFlow<Renewal?>(null)
+    val optionsSheetRenewal = _optionsSheetRenewal.asStateFlow()
+
+    fun showOptionsSheetForSubscription(subscriptionId: Int) {
+        viewModelScope.launch {
+            val sub = repository.getSubscription(subscriptionId) ?: return@launch
+            _optionsSheetRenewal.value = Renewal(
+                id = sub.id.toString(),
+                key = sub.key,
+                name = sub.name,
+                price = sub.price,
+                daysLeft = getDaysLeft(sub.nextBillingDate),
+                currency = sub.currency,
+                subscriptionType = sub.subscriptionType,
+                logoResId = sub.logoResId,
+                packageName = allServices
+                    .firstOrNull { it.key == sub.key || it.name == sub.name }
+                    ?.packageName,
+                nextBillingDate = sub.nextBillingDate
+            )
+        }
+    }
+
+    fun dismissOptionsSheet() {
+        _optionsSheetRenewal.value = null
+    }
 
     fun deleteSubscription(id: String) {
 

@@ -185,7 +185,7 @@ fun CalendarScreen(
 
                     item {
                         Column(modifier = Modifier.clip(RoundedCornerShape(15.dp))
-                            .background(ThemeColors.getLightGreyColor(isDarkTheme))
+                            .background(ThemeColors.getCardBackgroundColor(isDarkTheme))
                             .border(1.dp, ThemeColors.getLightGreyColor(isDarkTheme), RoundedCornerShape(15.dp))
                             .padding(horizontal = 8.dp, vertical = 8.dp)) {
                             Row(
