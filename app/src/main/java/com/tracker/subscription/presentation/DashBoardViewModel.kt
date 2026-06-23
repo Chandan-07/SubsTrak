@@ -94,7 +94,9 @@ class DashboardViewModel(
                         billingCycle = it.billingCycle,
                         category = it.category,
                         startDate = it.startDate,
-                        reminderEnabled = it.reminderEnabled
+                        reminderEnabled = it.reminderEnabled,
+                        reminderDaysBefore = it.reminderDaysBefore,
+                        freeTrialPeriod = it.freeTrialPeriod
                     )
                 }
 
@@ -191,32 +193,40 @@ class DashboardViewModel(
     }
 
 
+    fun syncLoggedInState(loggedIn: Boolean) {
+        _isLoggedIn.value = loggedIn
+    }
+
+    fun onSignOut() {
+        _isLoggedIn.value = false
+        currentUser = null
+        viewModelScope.launch {
+            repository.deleteSubData()
+            repository.clearUserProfile()
+        }
+    }
+
+    suspend fun persistAuthUser(user: AuthUser) {
+        currentUser = user
+        val displayName = user.name?.takeIf { it.isNotBlank() }
+            ?: user.email?.substringBefore("@")
+            ?: "User"
+        repository.saveUserDetails(
+            UserEntity(
+                id = user.uid,
+                name = displayName,
+                email = user.email ?: "",
+                logoResId = user.photo,
+                phone = "",
+            )
+        )
+    }
+
     fun setUser(user: AuthUser?) {
         currentUser = user
         user?.let {
             viewModelScope.launch {
-                if (isLoggedIn.value){
-                    repository.saveUserDetails(
-                        UserEntity(
-                            id ="34567",
-                            name =  "Guest",
-                            email =  "",
-                            logoResId = "",
-                            phone = "",
-                        )
-                    )
-                } else{
-                    repository.saveUserDetails(
-                        UserEntity(
-                            id = user.uid,
-                            name = user.name ?: "Guest",
-                            email = user.email ?: "",
-                            logoResId = user.photo,
-                            phone = "",
-                        )
-                    )
-                }
-
+                persistAuthUser(it)
             }
         }
     }

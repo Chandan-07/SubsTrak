@@ -14,8 +14,8 @@ android {
         applicationId = "com.tracker.subscription"
         minSdk = 24
         targetSdk = 35
-        versionCode = 25
-        versionName = "1.0.25"
+        versionCode = 38
+        versionName = "1.0.38"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -113,4 +113,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("com.airbnb.android:lottie-compose:6.4.0")
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
 }

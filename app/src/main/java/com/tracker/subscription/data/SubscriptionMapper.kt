@@ -14,7 +14,9 @@ fun SubscriptionEntity.toDomain(): Subscription {
         category = category,
         currency = currency,
         reminderEnabled = reminderEnabled,
+        reminderDaysBefore = reminderDaysBefore,
         subscriptionType = subscriptionType,
-        logoResId = logoResId
+        logoResId = logoResId,
+        freeTrialPeriod = freeTrialPeriod
     )
 }

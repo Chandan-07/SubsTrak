@@ -15,10 +15,11 @@ object ReminderScheduler {
     fun scheduleReminder(
         context: Context,
         subscriptionId: Int,
-        nextBillingDate: Long
+        nextBillingDate: Long,
+        reminderDaysBefore: Int
     ) {
 
-        val reminderTime = calculateReminderTime(nextBillingDate)
+        val reminderTime = calculateReminderTime(nextBillingDate, reminderDaysBefore)
 
         val delay = max(0, reminderTime - System.currentTimeMillis())
 
@@ -38,14 +39,14 @@ object ReminderScheduler {
             )
     }
 
-    private fun calculateReminderTime(nextBillingDate: Long): Long {
+    private fun calculateReminderTime(nextBillingDate: Long, reminderDaysBefore: Int): Long {
 
         val calendar = Calendar.getInstance()
         val now = System.currentTimeMillis()
 
         calendar.timeInMillis = nextBillingDate
 
-        calendar.add(Calendar.DAY_OF_MONTH, -1)
+        calendar.add(Calendar.DAY_OF_MONTH, -reminderDaysBefore.coerceIn(1, 30))
 
         calendar.set(Calendar.HOUR_OF_DAY, 10)
         calendar.set(Calendar.MINUTE, 18)

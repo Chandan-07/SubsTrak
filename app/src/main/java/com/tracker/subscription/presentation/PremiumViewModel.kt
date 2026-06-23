@@ -1,33 +1,59 @@
 package com.tracker.subscription.presentation
 
 import android.app.Activity
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.billingclient.api.ProductDetails
 import com.tracker.subscription.data.PlanUi
 import com.tracker.subscription.data.repo.BillingRepository
+import com.tracker.subscription.data.repo.PurchaseEvent
 import kotlinx.coroutines.launch
 
 class PremiumViewModel(
     private val repo: BillingRepository
 ) : ViewModel() {
 
-    var plans by mutableStateOf<List<PlanUi>>(arrayListOf())
+    var plans by mutableStateOf<List<PlanUi>>(emptyList())
         private set
 
     var selectedPlan by mutableStateOf<PlanUi?>(null)
 
-    fun loadPlans() {
+    var isPurchasing by mutableStateOf(false)
+        private set
+
+    var purchaseSuccess by mutableStateOf(false)
+        private set
+
+    var isAlreadyPremium by mutableStateOf(false)
+        private set
+
+    init {
+        viewModelScope.launch {
+            repo.purchaseEvents.collect { event ->
+                when (event) {
+                    PurchaseEvent.Success -> {
+                        isPurchasing = false
+                        purchaseSuccess = true
+                        isAlreadyPremium = true
+                    }
+                    PurchaseEvent.Failed -> isPurchasing = false
+                    PurchaseEvent.Pending -> isPurchasing = true
+                }
+            }
+        }
+    }
+
+    fun loadPlans(isAppUserSignedIn: Boolean, guestPremiumOwned: Boolean) {
         viewModelScope.launch {
             repo.connect()
+            isAlreadyPremium = repo.shouldShowAlreadyPremium(
+                isAppUserSignedIn = isAppUserSignedIn,
+                guestPremiumOwned = guestPremiumOwned
+            )
 
             val products = repo.getSubscriptions()
-
-            Log.d("ASLMDS", "loadPlans: "+products)
             plans = products.map {
                 val price =
                     it.subscriptionOfferDetails?.first()?.pricingPhases
@@ -39,7 +65,7 @@ class PremiumViewModel(
                     price = price,
                     isYearly = it.productId.contains("year")
                 )
-            }.sortedByDescending { it.isYearly } // yearly on top
+            }.sortedByDescending { it.isYearly }
 
             selectedPlan = plans.firstOrNull()
         }
@@ -47,16 +73,12 @@ class PremiumViewModel(
 
     fun purchase(activity: Activity) {
         selectedPlan?.let {
+            isPurchasing = true
             repo.launchPurchase(activity, it.productDetails)
         }
     }
 
-    fun connectPurchaseStatus(){
-        viewModelScope.launch {
-            repo.connect()
-            repo.validateSubscription()
-        }
+    fun resetPurchaseSuccess() {
+        purchaseSuccess = false
     }
-
-
 }

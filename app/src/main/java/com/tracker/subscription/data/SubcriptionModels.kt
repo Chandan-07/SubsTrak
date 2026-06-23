@@ -8,12 +8,14 @@ data class Subscription(
     val name: String,
     val price: Double,
     val billingCycle: String,
+    val freeTrialPeriod: String,
     val startDate: Long,
     val nextBillingDate: Long,
     val currency: String,
     val category: String,
     val subscriptionType: String,   // NEW
     val reminderEnabled: Boolean,
+    val reminderDaysBefore: Int = 1,
     val logoResId: Int? = R.drawable.empty,
     val packageName: String? = ""
 )

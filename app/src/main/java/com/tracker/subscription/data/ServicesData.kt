@@ -7,14 +7,22 @@ data class Service(
     val name: String,
     val logo: Int,
     val packageName: String,
-    val category: String
+    val category: String,
+    val prices: List<SubscriptionPrice>
 )
 
+data class SubscriptionPrice(
+    val countryCode: String,
+    val currency: String,
+    val monthlyPrice: Double?= null,
+    val yearlyPrice: Double? = null
+)
 data class AuthUser(
     val uid: String,
     val name: String?,
     val email: String?,
-    val photo: String?
+    val photo: String?,
+    val isPremium: Boolean = false
 )
 
 data class ParsedSubscription(

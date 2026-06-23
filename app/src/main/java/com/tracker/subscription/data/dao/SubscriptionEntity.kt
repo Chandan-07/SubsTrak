@@ -27,7 +27,10 @@ data class SubscriptionEntity(
 
     val reminderEnabled: Boolean,
 
+    val reminderDaysBefore: Int = 1,
+
     val logoResId: Int? = null,
 
-    val key: String
-)
+    val key: String,
+
+    val freeTrialPeriod: String = "")

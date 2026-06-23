@@ -11,8 +11,15 @@ object CommonOptions {
     )
 
     val subscriptionType = listOf(
-        Option("Paid Subscription", "💳"),
-        Option("Free Trial", "🆓")
+        Option("Free Trial", "🆓"),
+        Option("Paid Subscription", "💳")
+    )
+
+    val freeTrial = listOf(
+        Option("7 days", "📅"),
+        Option("14 days", "🗓️"),
+        Option("30 days", "📆"),
+        Option("custom", "📆")
     )
 
     val categoryList = listOf(

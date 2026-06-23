@@ -64,9 +64,11 @@ import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
 import com.tracker.subscription.screens.addSub.formatDate
 import com.tracker.subscription.screens.home.openSubscription
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @Composable
 fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
+                isDarkTheme: Boolean,
                 onEdit: (Renewal) -> Unit,
                 onDelete: (Renewal) -> Unit) {
     val manropeSemiBold = FontFamily( Font(R.font.manrope_semi_bold) )
@@ -99,7 +101,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
     ) {
 
         Column(modifier = Modifier
-            .background(color = colorResource(R.color.white))
+            .background(color = ThemeColors.getBackgroundColor(isDarkTheme),)
             .fillMaxWidth()
             .padding(start = 18.dp, top = 20.dp, bottom = 10.dp, end = 18.dp)
 
@@ -115,7 +117,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                         modifier = Modifier
                             .size(56.dp)
                             .background(
-                                color = Color.White,
+                                color = ThemeColors.getBackgroundColor(isDarkTheme),
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -167,6 +169,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontSize = 18.sp,
                                 fontFamily = manropeExtraBold,
+                                color = ThemeColors.getTextColor(isDarkTheme),
                                 modifier = Modifier.padding(end = 10.dp)
                             )
                         }
@@ -175,21 +178,21 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFFF3DDB9), // green
+                                    color = ThemeColors.getLightOrangeColor(isDarkTheme), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
-                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                                .padding(horizontal = 2.dp)
                             ){
                                 Icon(painter = painterResource(R.drawable.timer),
                                     "", modifier = Modifier.size(12.dp).padding(start = 3.dp).align(
                                         Alignment.CenterVertically), tint = Color.Unspecified)
                                 Text(
                                     text = "Free Trial",
-                                    color = Color.Black,
+                                    color = ThemeColors.getFreeTrailTextColor(isDarkTheme),
                                     fontSize = 9.sp,
                                     fontFamily = manropeBold,
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        .padding(horizontal = 4.dp)
                                     ,
                                 )
                             }
@@ -198,22 +201,22 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFF8BB755), // green
+                                    color =  if (isDarkTheme) Color(0xFF425437) else Color(0xFF8BB755), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
-                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                .padding(horizontal = 3.dp)
                             ){
                                 Icon(painter = painterResource(R.drawable.container__2_), "",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(12.dp).padding(start = 2.dp, top = 2.dp, bottom = 2.dp).align(
+                                    tint = if (isDarkTheme) Color(0xFFA9D77F) else Color.Unspecified,
+                                    modifier = Modifier.size(12.dp).padding(start = 3.dp).align(
                                         Alignment.CenterVertically))
                                 Text(
-                                    text = "Active",
-                                    color = Color.White,
+                                    text = "Paid",
+                                    color = if (isDarkTheme) Color(0xFFA9D77F) else Color.White,
                                     fontSize = 9.sp,
                                     fontFamily = manropeBold,
                                     modifier = Modifier
-                                        .padding(horizontal = 2.dp, vertical = 2.dp)
+                                        .padding(horizontal = 3.dp)
                                     ,
                                 )
                             }
@@ -224,8 +227,8 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                 Spacer(Modifier.height(8.dp))
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        formatCurrency(renewal.price, renewal.currency), style = MaterialTheme.typography.bodyMedium, color = colorResource(
-                            R.color.black), fontSize = 18.sp, fontFamily = manropeExtraBold)
+                        formatCurrency(renewal.price, renewal.currency), style = MaterialTheme.typography.bodyMedium,
+                        color = ThemeColors.getTextColor(isDarkTheme), fontSize = 18.sp, fontFamily = manropeExtraBold)
                     Spacer(Modifier.height(30.dp))
                 }
 
@@ -260,9 +263,9 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                     Row (modifier = Modifier
                         .clip(RoundedCornerShape(15.dp))
-                        .border(0.5.dp, colorResource(R.color.blue), CircleShape)
+                        .border(0.5.dp, ThemeColors.getDarkBlueColor(isDarkTheme), CircleShape)
                         .background(
-                            color = Color.White, // green
+                            color = ThemeColors.getBackgroundColor(isDarkTheme), // green
                             shape = RoundedCornerShape(15.dp)
                         )
                         .clickable { onEdit(renewal) }
@@ -270,7 +273,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                     ){
                         Text(
                             text = "Edit",
-                            color = colorResource(R.color.blue),
+                            color = ThemeColors.getDarkBlueColor(isDarkTheme),
                             fontSize = 11.sp,
                             fontFamily = manropeBold,
                             modifier = Modifier
@@ -282,9 +285,9 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
                     Row (modifier = Modifier
                         .clip(RoundedCornerShape(15.dp))
-                        .border(0.5.dp, Color(0xFFD50000), CircleShape)
+                        .border(0.5.dp, ThemeColors.getRedColor(isDarkTheme), CircleShape)
                         .background(
-                            color = Color.White, // green
+                            color = ThemeColors.getBackgroundColor(isDarkTheme), // green
                             shape = RoundedCornerShape(15.dp)
                         ).clickable {
                             selectedSub = renewal
@@ -294,7 +297,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                     ){
                         Text(
                             text = "Delete",
-                            color = Color(0xFFD50000),
+                            color = ThemeColors.getRedColor(isDarkTheme),
                             fontSize = 11.sp,
                             fontFamily = manropeBold,
                             modifier = Modifier
@@ -310,16 +313,10 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF1A2AC0),
-                                    Color(0xFF1A2AC0)
-                                )
-                            )
+                           color = colorResource( R.color.dark_blue_bg)
                         )
-                        .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                         .clickable {  openSubscription(context, renewal) }
-                        .padding(horizontal = 8.dp, vertical = 7.dp)
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
                 ) {
 
                     Row(
@@ -327,13 +324,13 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                     ) {
 
                         Text(
-                            text = "Take Action",
+                            text = "Manage",
                             color = Color.White,
                             fontSize = 10.sp,
-                            fontFamily = manropeExtraBold
+                            fontFamily = manropeMedium
                         )
-                        Spacer(Modifier.width(5.dp))
-                        Icon(painterResource(R.drawable.gem), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
+//                        Spacer(Modifier.width(5.dp))
+//                        Icon(painterResource(R.drawable.gem), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
 
                     }
                 }
@@ -381,6 +378,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 fun SubscriptionItem(
     sub: Subscription,
     service: Service?,
+    isDarkTheme: Boolean,
     onEdit: (Subscription) -> Unit,
     onDelete: (Subscription) -> Unit
 ) {
@@ -410,7 +408,7 @@ fun SubscriptionItem(
 
         Row(
             modifier = Modifier
-                .background(color = colorResource(R.color.white))
+                .background(ThemeColors.getCardBackgroundColor(isDarkTheme))
                 .fillMaxWidth()
                 .padding(top = 16.dp, bottom = 12.dp)
 
@@ -467,7 +465,7 @@ fun SubscriptionItem(
                     Column {
                         Text(
                             sub.name,
-                            color = colorResource(R.color.blue_text),
+                            color = ThemeColors.getTextColor(isDarkTheme),
                             fontFamily = manropeBold,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -475,21 +473,21 @@ fun SubscriptionItem(
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFFF3DDB9), // green
+                                    color = ThemeColors.getLightOrangeColor(isDarkTheme), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
-                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                                .padding(horizontal = 2.dp)
                             ){
                                 Icon(painter = painterResource(R.drawable.timer),
-                                    "", modifier = Modifier.size(15.dp).padding(start = 3.dp).align(
+                                    "", modifier = Modifier.size(12.dp).padding(start = 3.dp).align(
                                         Alignment.CenterVertically), tint = Color.Unspecified)
                                 Text(
                                     text = "Free Trial",
-                                    color = Color.Black,
+                                    color = ThemeColors.getFreeTrailTextColor(isDarkTheme),
                                     fontSize = 9.sp,
                                     fontFamily = manropeBold,
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        .padding(horizontal = 4.dp)
                                     ,
                                 )
                             }
@@ -498,22 +496,22 @@ fun SubscriptionItem(
 
                             Row (modifier = Modifier
                                 .background(
-                                    color = Color(0xFF8BB755), // green
+                                    color =  if (isDarkTheme) Color(0xFF425437) else Color(0xFF8BB755), // green
                                     shape = RoundedCornerShape(15.dp)
                                 )
-                                .padding(horizontal = 3.dp, vertical = 2.dp)
+                                .padding(horizontal = 3.dp)
                             ){
                                 Icon(painter = painterResource(R.drawable.container__2_), "",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(15.dp).padding(start = 2.dp, top = 3.dp, bottom = 3.dp).align(
+                                    tint = if (isDarkTheme) Color(0xFFA9D77F) else Color.Unspecified,
+                                    modifier = Modifier.size(12.dp).padding(start = 3.dp).align(
                                         Alignment.CenterVertically))
                                 Text(
-                                    text = "Active",
-                                    color = Color.White,
+                                    text = "Paid",
+                                    color = if (isDarkTheme) Color(0xFFA9D77F) else Color.White,
                                     fontSize = 9.sp,
                                     fontFamily = manropeBold,
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        .padding(horizontal = 3.dp)
                                     ,
                                 )
                             }
@@ -538,7 +536,7 @@ fun SubscriptionItem(
                 modifier = Modifier.padding(end = 12.dp)) {
                 Text(
                     text = formatCurrency(sub.price, sub.currency),
-                    color = colorResource(R.color.blue_text),
+                    color = ThemeColors.getTextColor(isDarkTheme),
                     fontWeight = FontWeight.Bold,
                     fontFamily = manropeMedium,
                     modifier = Modifier
@@ -553,7 +551,7 @@ fun SubscriptionItem(
                             .size(28.dp)
                             .clip(CircleShape)
                             .border(0.8.dp, Color(0xFFECECEC), CircleShape)
-                            .background(Color.White)
+                            .background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme ))
                             .clickable { onEdit(sub) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -572,7 +570,7 @@ fun SubscriptionItem(
                             .size(28.dp)
                             .clip(CircleShape)
                             .border(0.8.dp, Color(0xFFECECEC), CircleShape)
-                            .background(Color.White)
+                            .background(ThemeColors.getBackgroundColor(isDarkTheme =isDarkTheme ))
                             .clickable {
                                 selectedSub = sub
                                 showDialog = true

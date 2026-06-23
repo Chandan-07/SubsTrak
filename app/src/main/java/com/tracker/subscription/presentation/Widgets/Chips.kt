@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
 import com.tracker.subscription.data.Option
+import com.tracker.subscription.ui.theme.ThemeColors
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -41,6 +42,7 @@ fun SingleSelectChips(
     modifier: Modifier = Modifier,
     isEmojiShow: Boolean = false,
     isCustomOption: Boolean = false,
+    isDarkTheme: Boolean,
     onSelected: (String) -> Unit
 ) {
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
@@ -74,7 +76,7 @@ fun SingleSelectChips(
                         )
                         .border(
                             width = 1.dp,
-                            color = if (isSelected) Color.White
+                            color = if (isSelected) ThemeColors.getLightGreyColor(isDarkTheme)
                             else Color(0xFFE0E0E0),
                             shape = RoundedCornerShape(50)
                         )
@@ -111,7 +113,8 @@ fun BillingChips(
     selected: String,
     options: List<Option>,
     modifier: Modifier = Modifier,
-    isEmojiShow: Boolean = false,
+    isFreeTrial: Boolean = false,
+    isDarkTheme: Boolean,
     onSelected: (String) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -129,14 +132,14 @@ fun BillingChips(
 
         FlowRow(
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50))
             .background(
-                Color(0xFFF5F5F5)
+                ThemeColors.getCardBackgroundColor(isDarkTheme)
             )
             .border(
                 width = 1.dp,
-                color =  Color.White,
+                color =  ThemeColors.getLightGreyColor(isDarkTheme),
                 shape = RoundedCornerShape(50)
             )
         ) {
@@ -154,14 +157,14 @@ fun BillingChips(
                     Row(modifier = Modifier .clip(RoundedCornerShape(50))
                         .background(
                             if (isSelected) Color(0xFFFFC400)
-                            else Color(0xFFF5F5F5)
+                            else ThemeColors.getCardBackgroundColor(isDarkTheme)
                         )) {
 
                         Text(
                             text = option.name,
-                            color =  Color.Black,
+                            color =  ThemeColors.getTextColor(isDarkTheme),
                             fontFamily = manropeBold,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 25.dp)
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = if (isFreeTrial)10.dp else 25.dp)
                         )
                     }
 
@@ -178,6 +181,7 @@ fun SubTypeChip(
     options: List<Option>,
     modifier: Modifier = Modifier,
     isEmojiShow: Boolean = false,
+    isDarkTheme: Boolean,
     onSelected: (String) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -209,13 +213,13 @@ fun SubTypeChip(
                                 .border(
                                     width = 1.dp,
                                     color =  if (isSelected) Color(0xFF2979FF)
-                                    else Color.White,
+                                    else ThemeColors.getBackgroundColor(isDarkTheme),
                                     shape = RoundedCornerShape(50)
                                 ).padding(5.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(
                                     if (isSelected) Color(0xFF2979FF)
-                                    else Color(0xFFF5F5F5)
+                                        else ThemeColors.getCardBackgroundColor(isDarkTheme)
                                 )
                                 .padding(vertical = 20.dp), // ❗ remove horizontal padding
                             contentAlignment = Alignment.Center // 🔥 center text
@@ -223,8 +227,9 @@ fun SubTypeChip(
 
                             Text(
                                 text = option.name,
-                                color = if (isSelected) Color.White else Color.Black,
-                                fontFamily = manropeBold
+                                color = if (isSelected) Color.White else ThemeColors.getDarkGreyColor(isDarkTheme),
+                                fontFamily = manropeBold,
+                                fontSize = 13.sp
                             )
                         }
                     }

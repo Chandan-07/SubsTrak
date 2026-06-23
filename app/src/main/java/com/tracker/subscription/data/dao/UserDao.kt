@@ -23,29 +23,17 @@ interface UserDao {
     @Query("DELETE FROM users")
     suspend fun deleteUser()
 
-    // ✅ Update only subscription status
-    @Query("""
-        UPDATE users 
-        SET isPremium = :isPremium 
-        WHERE id = :userId
-    """)
-    suspend fun updatePremiumStatus(userId: Int, isPremium: Boolean)
+    @Query("UPDATE users SET isPremium = :isPremium")
+    suspend fun updatePremiumStatus(isPremium: Boolean)
 
-    // ✅ Store purchase token (important for validation)
-    @Query("""
-        UPDATE users 
-        SET purchaseToken = :token 
-        WHERE id = :userId
-    """)
-    suspend fun updatePurchaseToken(userId: Int, token: String)
+    @Query("UPDATE users SET purchaseToken = :token")
+    suspend fun updatePurchaseToken(token: String)
 
-    // ✅ Store subscription expiry
-    @Query("""
-        UPDATE users 
-        SET expiryTime = :expiryTime 
-        WHERE id = :userId
-    """)
-    suspend fun updateExpiry(userId: Int, expiryTime: Long)
+    @Query("UPDATE users SET expiryTime = :expiryTime")
+    suspend fun updateExpiry(expiryTime: Long)
+
+    @Query("SELECT expiryTime FROM users LIMIT 1")
+    suspend fun getExpiryTime(): Long?
 
     // ✅ Check if user is premium (quick access)
     @Query("SELECT isPremium FROM users LIMIT 1")
@@ -54,4 +42,10 @@ interface UserDao {
     // ✅ Get token (for backend verification / restore)
     @Query("SELECT purchaseToken FROM users LIMIT 1")
     suspend fun getPurchaseToken(): String?
+
+    @Query("SELECT id FROM users LIMIT 1")
+    suspend fun getCurrentUserId(): String?
+
+    @Query("UPDATE users SET isPremium = 0, purchaseToken = NULL, expiryTime = NULL")
+    suspend fun clearPremiumStatus()
 }
