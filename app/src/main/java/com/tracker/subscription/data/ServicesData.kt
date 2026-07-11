@@ -28,7 +28,8 @@ data class AuthUser(
 data class ParsedSubscription(
     val service: String,
     val amount: Double,
-    val date: Long
+    val date: Long,
+    val currency: String = "₹"
 )
 
 data class Sms(

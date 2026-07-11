@@ -85,12 +85,14 @@ import com.tracker.subscription.screens.calendar.CalendarScreen
 import com.tracker.subscription.screens.home.DashboardUiState
 import com.tracker.subscription.screens.home.cards.SubscriptionOptionsSheet
 import com.tracker.subscription.screens.home.ViewAllScreen
+import com.tracker.subscription.screens.home.ViewAllSubscriptionsScreen
 import com.tracker.subscription.ui.data.BottomNavItem
 import com.tracker.subscription.ui.theme.SubscriptionTheme
 import com.tracker.subscription.ui.theme.ThemeColors
 import com.tracker.subscription.ui.theme.ThemeState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box as Box1
+import com.tracker.subscription.analytics.SubtlyAnalytics
 
 class MainActivity : ComponentActivity() {
 
@@ -98,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SubtlyAnalytics.initialize(this)
         notificationIntentState.value = intent
 
         enableEdgeToEdge(
@@ -260,6 +263,12 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
                 val optionsSheetRenewal by viewModel.optionsSheetRenewal.collectAsState()
 
+                LaunchedEffect(currentRoute) {
+                    currentRoute?.let { route ->
+                        SubtlyAnalytics.logScreenView(route)
+                    }
+                }
+
                 Box1(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     containerColor = bgColor,
@@ -359,13 +368,17 @@ class MainActivity : ComponentActivity() {
                                         }
                                         OnboardingPreference.setLoggedIn(context, true)
                                         viewModel.syncLoggedInState(true)
+                                        SubtlyAnalytics.logSignInSuccess(user.uid, user.email)
                                         navController.navigate("dashboard")
                                     } catch (e: Exception) {
+                                        SubtlyAnalytics.logSignInFailed(e.localizedMessage ?: "Google sign in failed")
                                         e.printStackTrace()
                                     } finally {
                                         viewModel.setLoading(false)
                                     }
                                 }
+                            } else {
+                                SubtlyAnalytics.logSignInFailed("Sign in cancelled or failed")
                             }
                         }
 
@@ -374,11 +387,13 @@ class MainActivity : ComponentActivity() {
                                 isLoading = isLoading,
                                 onGoogleSignIn = {
                                     if (!isLoading) {
+                                        SubtlyAnalytics.logSignInStart()
                                         launcher.launch(googleAuthClient.getSignInIntent())
                                     }
                                 },
                                 onSkip = {
                                     if (!isLoading) {
+                                        SubtlyAnalytics.logSignInSkip()
                                         scope.launch {
                                             OnboardingPreference.setAuthSkipped(context)
                                             navController.navigate("dashboard")
@@ -415,8 +430,10 @@ class MainActivity : ComponentActivity() {
                                 val isPremium = dashboard?.user?.isPremium == true
 
                                 if (subsCount >= 5 && !isPremium) {
+                                    SubtlyAnalytics.logPremiumTriggerLimit(subsCount)
                                     navController.navigate("premium")
                                 } else {
+                                    SubtlyAnalytics.logSubscriptionAddStart("manual")
                                     navController.navigate("add_subscription")
                                 }
                             },
@@ -474,8 +491,25 @@ class MainActivity : ComponentActivity() {
                                         key = entity.key,
                                         freeTrialPeriod = entity.freeTrialPeriod
                                     )
+                                    SubtlyAnalytics.logSubscriptionAddSuccess(
+                                        name = entity.name,
+                                        price = entity.price,
+                                        currency = entity.currency,
+                                        billingCycle = entity.billingCycle,
+                                        category = entity.category,
+                                        type = entity.subscriptionType,
+                                        source = "manual"
+                                    )
                                 } else {
                                     addSubViewModel.updateSubscription(entity)
+                                    SubtlyAnalytics.logSubscriptionUpdateSuccess(
+                                        name = entity.name,
+                                        price = entity.price,
+                                        currency = entity.currency,
+                                        billingCycle = entity.billingCycle,
+                                        category = entity.category,
+                                        type = entity.subscriptionType
+                                    )
                                 }
 
                                 navController.navigate("success_screen")
@@ -534,6 +568,28 @@ class MainActivity : ComponentActivity() {
                             viewModel,
                             navController,
                             isDarkTheme
+                        )
+                    }
+
+                    composable("view_all_subscriptions", enterTransition = {
+                        slideInHorizontally { it }
+                    },
+                        exitTransition = {
+                            slideOutHorizontally { it }
+                        }) {
+                        val state by viewModel.uiState.collectAsState()
+
+                        val subscriptions = (state as? DashboardUiState.Success)
+                            ?.data
+                            ?.subscriptions ?: emptyList()
+
+                        ViewAllSubscriptionsScreen(
+                            title = "Active Subscriptions",
+                            subscriptions = subscriptions,
+                            onBack = { navController.popBackStack() },
+                            viewModel = viewModel,
+                            navController = navController,
+                            isDarkTheme = isDarkTheme
                         )
                     }
 
@@ -619,7 +675,7 @@ class MainActivity : ComponentActivity() {
                                 isPremium = isPremium,
                                 isDarkTheme = currentTheme,
                                 onThemeToggle = { newTheme ->
-                                    currentTheme = newTheme
+                                        currentTheme = newTheme
                                 },
                                 onSignOut = {
                                     viewModel.setLoading(true)
@@ -632,6 +688,7 @@ class MainActivity : ComponentActivity() {
                                             OnboardingPreference.setGuestPremiumOwned(context, false)
                                             OnboardingPreference.setLoggedIn(context, false)
                                             viewModel.onSignOut()
+                                            SubtlyAnalytics.logSignOut()
                                             navController.navigate("auth") {
                                                 popUpTo(0)
                                             }

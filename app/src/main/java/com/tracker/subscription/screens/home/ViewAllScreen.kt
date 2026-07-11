@@ -25,8 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.tracker.subscription.data.Renewal
+import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.screens.home.cards.RenewalItem
+import com.tracker.subscription.screens.home.cards.SubscriptionItem
 import com.tracker.subscription.ui.theme.ThemeColors
 
 @Composable
@@ -99,4 +101,57 @@ import com.tracker.subscription.ui.theme.ThemeColors
         }
     }
 
+}
+
+@Composable
+fun ViewAllSubscriptionsScreen(
+    title: String,
+    subscriptions: List<Subscription>?,
+    onBack: () -> Unit,
+    viewModel: DashboardViewModel,
+    navController: NavController,
+    isDarkTheme: Boolean
+) {
+    Column(modifier = Modifier.background(ThemeColors.getBlueBgColor(isDarkTheme)).fillMaxSize()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 56.dp)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = ThemeColors.getDarkGreyColor(isDarkTheme)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                title,
+                color = ThemeColors.getTextColor(isDarkTheme),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            subscriptions?.let { items ->
+                items(items) { subscription ->
+                    SubscriptionItem(
+                        sub = subscription,
+                        service = viewModel.getServiceByKey(subscription.key),
+                        isDarkTheme = isDarkTheme,
+                        onEdit = { navController.navigate("add_subscription?id=${it.id}") },
+                        onDelete = { viewModel.deleteSubscription(it.id) }
+                    )
+                }
+            }
+        }
+    }
 }

@@ -230,43 +230,38 @@ fun CalendarScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(7),
-                                userScrollEnabled = false,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(320.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                itemsIndexed(
-                                    cells,
-                                    key = { index, cell ->
-                                        when (cell) {
-                                            is CalendarCell.Blank -> "blank-$index"
-                                            is CalendarCell.Day -> "day-${cell.startOfDayMillis}"
+                            cells.chunked(7).forEach { weekCells ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    weekCells.forEach { cell ->
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            when (cell) {
+                                                is CalendarCell.Blank -> {
+                                                    Spacer(modifier = Modifier.aspectRatio(1f))
+                                                }
+
+                                                is CalendarCell.Day -> {
+                                                    CalendarDayCell(
+                                                        cell = cell,
+                                                        isToday = isToday(year, monthIndex, cell.dayOfMonth),
+                                                        isDarkTheme = isDarkTheme,
+                                                        onClick = {
+                                                            if (cell.events.isNotEmpty()) {
+                                                                selectedDay = cell
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
-                                ) { _, cell ->
-                                    when (cell) {
-                                        is CalendarCell.Blank -> {
-                                            Spacer(modifier = Modifier.aspectRatio(1f))
-                                        }
-
-                                        is CalendarCell.Day -> {
-                                            CalendarDayCell(
-                                                cell = cell,
-                                                isToday = isToday(year, monthIndex, cell.dayOfMonth),
-                                                isDarkTheme = isDarkTheme,
-                                                onClick = {
-                                                    if (cell.events.isNotEmpty()) {
-                                                        selectedDay = cell
-                                                    }
-                                                }
-                                            )
-                                        }
+                                    if (weekCells.size < 7) {
+                                        Spacer(modifier = Modifier.weight((7 - weekCells.size).toFloat()))
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
 
@@ -376,18 +371,43 @@ fun CalendarScreen(
                                         .padding(vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val isDrawable = ev.logoResId != null &&
+                                            ev.logoResId != 0 &&
+                                            ev.logoResId != -1 &&
+                                            ev.logoResId != R.drawable.empty &&
+                                            runCatching {
+                                                context.resources.getResourceTypeName(ev.logoResId)
+                                            }.getOrNull() == "drawable"
 
-                                    if (ev.logoResId != null && ev.logoResId != -1) {
-                                    Image(
-                                        painter = painterResource(
-                                            ev.logoResId ?: R.drawable.empty
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                    )
-                                    }else {
+                                    if (isDrawable) {
+                                        val painter = runCatching {
+                                            painterResource(id = ev.logoResId!!)
+                                        }.getOrNull()
+                                        if (painter != null) {
+                                            Image(
+                                                painter = painter,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .size(42.dp)
+                                                    .clip(CircleShape)
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(42.dp)
+                                                    .clip(CircleShape)
+                                                    .background(randomColor),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = ev.name.firstOrNull()?.uppercase() ?: "",
+                                                    color = ThemeColors.getTextColor(isDarkTheme),
+                                                    fontSize = 20.sp,
+                                                    fontFamily = manropeBold
+                                                )
+                                            }
+                                        }
+                                    } else {
                                         Box(
                                             modifier = Modifier
                                                 .size(42.dp)
@@ -395,15 +415,14 @@ fun CalendarScreen(
                                                 .background(randomColor),
                                             contentAlignment = Alignment.Center
                                         ) {
-
                                             Text(
-                                                text = ev.name.first().uppercase(),
+                                                text = ev.name.firstOrNull()?.uppercase() ?: "",
                                                 color = ThemeColors.getTextColor(isDarkTheme),
                                                 fontSize = 20.sp,
                                                 fontFamily = manropeBold
                                             )
                                         }
-                                        }
+                                    }
 
                                     Spacer(modifier = Modifier.width(14.dp))
 
@@ -628,7 +647,7 @@ fun FallbackAvatar(
     ) {
 
         Text(
-            text = name.first().uppercase(),
+            text = name.firstOrNull()?.uppercase() ?: "",
             color = ThemeColors.getTextColor(isDarkTheme),
             fontSize = 9.sp,
             fontFamily = manropeBold

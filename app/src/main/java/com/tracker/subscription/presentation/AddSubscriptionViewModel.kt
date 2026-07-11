@@ -13,6 +13,7 @@ import com.tracker.subscription.data.dao.SubscriptionEntity
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.data.toDomain
 import kotlinx.coroutines.launch
+import com.tracker.subscription.analytics.SubtlyAnalytics
 
 class AddSubscriptionViewModel(
     private val repository: SubscriptionRepository
@@ -33,6 +34,9 @@ class AddSubscriptionViewModel(
     fun clearSelectedService() {
         selectedService = null
     }
+
+    private var searchLogJob: kotlinx.coroutines.Job? = null
+
     fun searchServices(query: String) {
 
         if (query.isBlank()) {
@@ -44,6 +48,13 @@ class AddSubscriptionViewModel(
 
         suggestions = allServices.filter {
             it.name.lowercase().replace(" ", "").contains(q)
+        }
+
+        // Debounce tracking log to avoid spamming analytics with intermediate keystrokes
+        searchLogJob?.cancel()
+        searchLogJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(800)
+            SubtlyAnalytics.logServiceSearch(query)
         }
     }
     fun saveSubscription(

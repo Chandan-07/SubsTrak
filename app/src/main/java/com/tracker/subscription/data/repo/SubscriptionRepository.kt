@@ -493,8 +493,13 @@ class SubscriptionRepository(
 
         val keywords = listOf(
             "subscription", "renewal", "renewed",
-            "upi mandate", "mandate",
-            "auto-debit", "bill"
+            "upi mandate", "e-mandate", "emandate", "mandate","mandate!",
+            "auto-debit", "autodebit", "autopay", "auto pay",
+            "spent"
+        )
+
+        val keywordPatterns = listOf(
+            Regex("\\bsi\\b", RegexOption.IGNORE_CASE)
         )
 
         val ignoreKeywords = listOf(
@@ -502,7 +507,8 @@ class SubscriptionRepository(
             "failed", "failure",
             "reversed", "refund", "refunded",
             "declined", "unsuccessful",
-            "expired", "blocked"
+            "expired", "blocked",
+            "continue enjoying"
         )
 
         val amountRegex = Regex(
@@ -522,13 +528,16 @@ class SubscriptionRepository(
                 if (ignoreKeywords.any { lowerMsg.contains(it) }) return@mapNotNull null
 
                 // 🔹 Step 1: keyword check
-                if (!keywords.any { lowerMsg.contains(it) }) return@mapNotNull null
+                val hasKeyword = keywords.any { lowerMsg.contains(it) } ||
+                        keywordPatterns.any { it.containsMatchIn(message) }
+                if (!hasKeyword) return@mapNotNull null
                 // 🔹 Step 2: detect known service
                 val service = services.firstOrNull { s ->
                     val name = s.name.lowercase()
                     lowerMsg.contains(name) ||
                             lowerMsg.contains("$name india") ||
                             lowerMsg.contains("$name.com") ||
+                            lowerMsg.contains("$name.COM") ||
                             lowerMsg.contains(name.replace(" ", ""))
                 }
 
@@ -548,7 +557,8 @@ class SubscriptionRepository(
                 ParsedSubscription(
                     service = finalService,
                     amount = cleanAmount,
-                    date = sms.date
+                    date = sms.date,
+                    currency = currencyFromAmount(rawAmount)
                 )
             }
             .toList()
@@ -556,9 +566,21 @@ class SubscriptionRepository(
         return services
     }
 
+    private fun currencyFromAmount(rawAmount: String): String {
+        val normalized = rawAmount.lowercase()
+        return when {
+            rawAmount.contains("₹") || normalized.contains("inr") || normalized.contains("rs") -> "₹"
+            rawAmount.contains("$") -> "$"
+            rawAmount.contains("€") -> "€"
+            rawAmount.contains("£") -> "£"
+            else -> "₹"
+        }
+    }
+
     fun extractMerchantName(message: String): String? {
 
         val patterns = listOf(
+            "at\\s+([a-zA-Z0-9*+&. '\\-]+?)(?:\\s+on\\b|\\s+for\\b|\\s+rs\\.?\\b|\\s+inr\\b|[.,;]|$)",
             "to ([a-zA-Z .]+)",
             "paid to ([a-zA-Z0-9 .]+)",
             "sent to ([a-zA-Z0-9 .]+)",
@@ -567,25 +589,58 @@ class SubscriptionRepository(
         )
 
         for (pattern in patterns) {
-            val match = Regex(pattern).find(message)
+            val match = Regex(pattern, RegexOption.IGNORE_CASE).find(message)
             if (match != null) {
-                return match.groupValues[1]
-                    .replace(Regex("[^a-zA-Z0-9 ]"), "")
-                    .replace("india", "", ignoreCase = true)
-                    .replace("media", "", ignoreCase = true)
-                    .replace("pvt ltd", "", ignoreCase = true)
-                    .replace("ltd", "", ignoreCase = true)
-                    .replace("limited", "", ignoreCase = true)
-                    .replace("has", "", ignoreCase = true)
-                    .trim()
-                    .split(" ")
-                    .take(2)
-                    .joinToString(" ")
-                    .replaceFirstChar { it.uppercase() }
+                val candidate = cleanMerchantCandidate(match.groupValues[1])
+                if (!candidate.isNullOrBlank()) return candidate
             }
         }
 
         return null
+    }
+
+    private fun cleanMerchantCandidate(rawCandidate: String): String? {
+        val cleaned = rawCandidate
+            .replace(Regex("[^a-zA-Z0-9+&. '\\- ]"), " ")
+            .replace(Regex("^\\s*www\\.", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\.(com|in|co|net|org)\\b", RegexOption.IGNORE_CASE), "")
+            .replace("india", "", ignoreCase = true)
+            .replace("media", "", ignoreCase = true)
+            .replace("pvt ltd", "", ignoreCase = true)
+            .replace("ltd", "", ignoreCase = true)
+            .replace("limited", "", ignoreCase = true)
+            .replace("has", "", ignoreCase = true)
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .split(" ")
+            .take(3)
+            .joinToString(" ")
+            .trim(' ', '.', '-', '\'')
+
+        if (cleaned.isBlank()) return null
+
+        val genericCandidates = setOf(
+            "continue",
+            "continue enjoying",
+            "your subscription",
+            "subscription",
+            "plan",
+            "membership",
+            "service",
+            "services",
+            "bill",
+            "auto pay",
+            "autopay",
+            "mandate",
+            "e mandate",
+            "emandate"
+        )
+
+        if (cleaned.lowercase() in genericCandidates) return null
+
+        return cleaned.split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { char -> char.uppercase() }
+        }
     }
     fun getExactService(name: String): Service? {
         return services.find {

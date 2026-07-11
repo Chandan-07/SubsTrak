@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import com.tracker.subscription.analytics.SubtlyAnalytics
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -58,6 +59,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -92,30 +95,34 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
     var showDialog by remember { mutableStateOf(false) }
     var selectedSub by remember { mutableStateOf<Renewal?>(null) }
     var selectedRenewal by remember { mutableStateOf<Renewal?>(null) }
+    val haptic = LocalHapticFeedback.current
 
     if (selectedRenewal != null) {
         SubscriptionOptionsSheet(
             renewal = selectedRenewal!!,
             isDarkTheme = isDarkTheme,
+            onEdit = { ren ->
+                selectedRenewal = null
+                onEdit(ren)
+            },
+            onDelete = { ren ->
+                selectedRenewal = null
+                selectedSub = ren
+                showDialog = true
+            },
             onDismiss = { selectedRenewal = null }
         )
     }
-    val colors = listOf(
-        Color(0xFF90CAF9),
-        Color(0xFFA5D6A7),
-        Color(0xFFFFCC80),
-        Color(0xFFCE93D8),
-        Color(0xFFFFAB91),
-        Color(0xFF80DEEA),
-        Color(0xFFE6EE9C)
-    )
-
-    val randomColor = colors.random()
+    val fallbackColor = stableFallbackAvatarColor(renewal.key.ifBlank { renewal.name })
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp, horizontal = 12.dp),
+            .padding(vertical = 10.dp, horizontal = 12.dp)
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                selectedRenewal = renewal
+            },
         elevation = CardDefaults.cardElevation(3.dp),
         shape = RoundedCornerShape(25.dp)
 
@@ -165,11 +172,11 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(randomColor),
+                                    .background(fallbackColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = renewal.name.first().uppercase(),
+                                    text = renewal.name.firstOrNull()?.uppercase() ?: "",
                                     color = Color.White,
                                     fontFamily = manropeBold,
                                     fontSize = 30.sp
@@ -263,116 +270,58 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 
 
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            Row( horizontalArrangement = Arrangement.Absolute.SpaceEvenly) {
-                Text(
-                    text = renewalDateText(renewal.nextBillingDate, renewal.subscriptionType),
-                    color = colorResource(R.color.dark_grey),
-                    fontSize = 12.sp,
-                    fontFamily = manropeMedium,
-                    textAlign = TextAlign.Left
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Text(
-                    text = remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
-                    color = renewalColor(renewal.daysLeft),
-                    fontSize = 12.sp,
-                    fontFamily = manropeBold,
-                    textAlign = TextAlign.Left
-
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
-
-                Row(modifier = Modifier.weight(0.8f)) {
-
-                    Row (modifier = Modifier
-                        .clip(RoundedCornerShape(15.dp))
-                        .border(0.5.dp, ThemeColors.getDarkBlueColor(isDarkTheme), CircleShape)
-                        .background(
-                            color = ThemeColors.getBackgroundColor(isDarkTheme), // green
-                            shape = RoundedCornerShape(15.dp)
-                        )
-                        .clickable { onEdit(renewal) }
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ){
-                        Text(
-                            text = "Edit",
-                            color = ThemeColors.getDarkBlueColor(isDarkTheme),
-                            fontSize = 11.sp,
-                            fontFamily = manropeBold,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                            ,
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Row (modifier = Modifier
-                        .clip(RoundedCornerShape(15.dp))
-                        .border(0.5.dp, ThemeColors.getRedColor(isDarkTheme), CircleShape)
-                        .background(
-                            color = ThemeColors.getBackgroundColor(isDarkTheme), // green
-                            shape = RoundedCornerShape(15.dp)
-                        )
-                        .clickable {
-                            selectedSub = renewal
-                            showDialog = true
-                        }
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ){
-                        Text(
-                            text = "Delete",
-                            color = ThemeColors.getRedColor(isDarkTheme),
-                            fontSize = 11.sp,
-                            fontFamily = manropeBold,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                            ,
-                        )
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp, top = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = renewalDateText(renewal.nextBillingDate, renewal.subscriptionType),
+                        color = colorResource(R.color.dark_grey),
+                        fontSize = 12.sp,
+                        fontFamily = manropeMedium
+                    )
+                    Text(
+                        text = "• " + remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
+                        color = renewalColor(renewal.daysLeft),
+                        fontSize = 12.sp,
+                        fontFamily = manropeBold
+                    )
                 }
-                Spacer(modifier = Modifier
-                    .weight(0.2f)
-                    .height(10.dp))
-
 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            color = colorResource(R.color.dark_blue_bg)
-                        )
+                        .background(colorResource(R.color.dark_blue_bg))
                         .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                             selectedRenewal = renewal
                         }
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Spacer(Modifier.width(5.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Manage",
                             color = Color.White,
-                            fontSize = 10.sp,
-                            fontFamily = manropeMedium
+                            fontSize = 11.sp,
+                            fontFamily = manropeBold
                         )
-                        Spacer(Modifier.width(2.dp))
-                        Icon(painterResource(R.drawable.arrow_right), "", modifier = Modifier.size(12.dp), tint = Color.Unspecified)
-
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = Color.White
+                        )
                     }
                 }
-
             }
-
         }
         if (showDialog) {
             AlertDialog(
@@ -413,6 +362,8 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 fun SubscriptionOptionsSheet(
     renewal: Renewal,
     isDarkTheme: Boolean,
+    onEdit: ((Renewal) -> Unit)? = null,
+    onDelete: ((Renewal) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -420,170 +371,324 @@ fun SubscriptionOptionsSheet(
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
-    val colors = listOf(
-        Color(0xFFCE93D8),
-    )
-    val randomColor = colors.random()
+    val fallbackColor = stableFallbackAvatarColor(renewal.key.ifBlank { renewal.name })
+    val haptic = LocalHapticFeedback.current
+
     ModalBottomSheet(
         onDismissRequest = onDismiss
     ) {
-
-
-
-        Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val painter = runCatching {
-                painterResource(id = renewal.logoResId!!)
+                if (renewal.logoResId != null && renewal.logoResId != 0 && renewal.logoResId != R.drawable.empty) {
+                    painterResource(id = renewal.logoResId!!)
+                } else null
             }.getOrNull()
 
             if (painter != null) {
-
-                Icon(
+                Image(
                     painter = painter,
                     contentDescription = renewal.name,
-                    tint = Color.Unspecified,
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape)
+                        .background(Color(0xFFF3F3F3)),
+                    contentScale = ContentScale.Fit
                 )
-
             } else {
-
-                FallbackAvatar(
-                    name = renewal.name,
-                    randomColor = randomColor,
-                    manropeBold = manropeBold,
-                    isDarkTheme= isDarkTheme
-                )
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(fallbackColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = renewal.name.firstOrNull()?.uppercase() ?: "",
+                        color = Color.White,
+                        fontFamily = manropeBold,
+                        fontSize = 26.sp
+                    )
+                }
             }
-            Spacer(Modifier.height(5.dp))
 
-            Column(modifier  = Modifier
-                .weight(1f)
-                .padding(horizontal = 20.dp)) {
-                Text(
-                    text = renewal.name,
-                    fontFamily = manropeBold,
-                    fontSize = 18.sp,
-                    color = ThemeColors.getTextColor(isDarkTheme),
+            Spacer(Modifier.width(12.dp))
 
-                )
-                 Spacer(Modifier.height(6.dp))
-                if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value){
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = renewal.name,
+                        fontFamily = manropeBold,
+                        fontSize = 17.sp,
+                        color = ThemeColors.getTextColor(isDarkTheme)
+                    )
+                    Text(
+                        text = "• " + formatCurrency(renewal.price, renewal.currency),
+                        fontFamily = manropeExtraBold,
+                        fontSize = 15.sp,
+                        color = ThemeColors.getTextColor(isDarkTheme)
+                    )
+                }
 
-                    Row (modifier = Modifier
-                        .background(
-                            color = ThemeColors.getLightOrangeColor(isDarkTheme), // green
-                            shape = RoundedCornerShape(15.dp)
-                        )
-                        .padding(horizontal = 2.dp)
-                    ){
-                        Icon(painter = painterResource(R.drawable.timer),
-                            "", modifier = Modifier
-                                .size(12.dp)
-                                .padding(start = 3.dp)
-                                .align(
-                                    Alignment.CenterVertically
-                                ), tint = Color.Unspecified)
-                        Text(
-                            text = "Free Trial",
-                            color = ThemeColors.getFreeTrailTextColor(isDarkTheme),
-                            fontSize = 9.sp,
-                            fontFamily = manropeBold,
+                Spacer(Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (renewal.subscriptionType == SubscriptionType.FREE_TRIAL.value) {
+                        Row(
                             modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                            ,
-                        )
+                                .background(
+                                    color = ThemeColors.getLightOrangeColor(isDarkTheme),
+                                    shape = RoundedCornerShape(15.dp)
+                                )
+                                .padding(horizontal = 2.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.timer),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .padding(start = 3.dp)
+                                    .align(Alignment.CenterVertically),
+                                tint = Color.Unspecified
+                            )
+                            Text(
+                                text = "Free Trial",
+                                color = ThemeColors.getFreeTrailTextColor(isDarkTheme),
+                                fontSize = 9.sp,
+                                fontFamily = manropeBold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .background(
+                                    color = if (isDarkTheme) Color(0xFF425437) else Color(0xFF8BB755),
+                                    shape = RoundedCornerShape(15.dp)
+                                )
+                                .padding(horizontal = 3.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.container__2_),
+                                contentDescription = "",
+                                tint = if (isDarkTheme) Color(0xFFA9D77F) else Color.Unspecified,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .padding(start = 3.dp)
+                                    .align(Alignment.CenterVertically)
+                            )
+                            Text(
+                                text = "Paid",
+                                color = if (isDarkTheme) Color(0xFFA9D77F) else Color.White,
+                                fontSize = 9.sp,
+                                fontFamily = manropeBold,
+                                modifier = Modifier.padding(horizontal = 3.dp)
+                            )
+                        }
                     }
 
-                } else {
+                    Text(
+                        text = remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
+                        color = renewalColor(renewal.daysLeft),
+                        fontSize = 12.sp,
+                        fontFamily = manropeBold
+                    )
+                }
+            }
 
-                    Row (modifier = Modifier
-                        .background(
-                            color = if (isDarkTheme) Color(0xFF425437) else Color(0xFF8BB755), // green
-                            shape = RoundedCornerShape(15.dp)
+            Spacer(Modifier.width(8.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onEdit != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .border(0.5.dp, ThemeColors.getDarkBlueColor(isDarkTheme), CircleShape)
+                            .background(ThemeColors.getBackgroundColor(isDarkTheme))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                onDismiss()
+                                onEdit(renewal)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = ThemeColors.getDarkBlueColor(isDarkTheme),
+                            modifier = Modifier.size(16.dp)
                         )
-                        .padding(horizontal = 3.dp)
-                    ){
-                        Icon(painter = painterResource(R.drawable.container__2_), "",
-                            tint = if (isDarkTheme) Color(0xFFA9D77F) else Color.Unspecified,
-                            modifier = Modifier
-                                .size(12.dp)
-                                .padding(start = 3.dp)
-                                .align(
-                                    Alignment.CenterVertically
-                                ))
-                        Text(
-                            text = "Paid",
-                            color = if (isDarkTheme) Color(0xFFA9D77F) else Color.White,
-                            fontSize = 9.sp,
-                            fontFamily = manropeBold,
-                            modifier = Modifier
-                                .padding(horizontal = 3.dp)
-                            ,
+                    }
+                }
+
+                if (onDelete != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .border(0.5.dp, ThemeColors.getRedColor(isDarkTheme), CircleShape)
+                            .background(ThemeColors.getBackgroundColor(isDarkTheme))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                onDismiss()
+                                onDelete(renewal)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = ThemeColors.getRedColor(isDarkTheme),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(50.dp))
-            Text(
-                text = formatCurrency(renewal.price, renewal.currency),
-                fontFamily = manropeExtraBold,
-                fontSize = 16.sp,
-                color = ThemeColors.getTextColor(isDarkTheme),
-                )
-
         }
-        Spacer(Modifier.height(8.dp))
+
+        Spacer(Modifier.height(4.dp))
 
         HorizontalDivider(
             thickness = 0.8.dp,
             color = ThemeColors.getTextGreyColor(isDarkTheme),
-            modifier = Modifier.padding(horizontal = 24.dp)
+            modifier = Modifier.padding(horizontal = 20.dp)
         )
-        Spacer(Modifier.height(8.dp))
 
-        Log.d("ASDAD", "SubscriptionOptionsSheet: "+ renewal.packageName)
-        renewal.packageName?.let { packageName ->
+        Spacer(Modifier.height(12.dp))
 
-            SheetOption(
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            GridSheetOption(
                 title = "Open App",
-                subTitle = "Launch "+ renewal.name,
+                subTitle = "Launch " + renewal.name,
                 icon = R.drawable.open_app,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                modifier = Modifier.weight(1f)
             ) {
-                context.packageManager
-                    .getLaunchIntentForPackage(packageName)
-                    ?.let(context::startActivity)
-
+                SubtlyAnalytics.logOptionOpenApp(renewal.name)
+                renewal.packageName?.let { packageName ->
+                    context.packageManager
+                        .getLaunchIntentForPackage(packageName)
+                        ?.let(context::startActivity)
+                }
                 onDismiss()
             }
 
-            SheetOption(
-                title = "Manage Subscription",
-                subTitle = "View or Manage in PlayStore",
+            GridSheetOption(
+                title = "Manage Sub",
+                subTitle = "Open Google Play Store",
                 icon = R.drawable.manage_sub,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                modifier = Modifier.weight(1f)
             ) {
+                SubtlyAnalytics.logOptionManageSubscription(renewal.name)
                 openSubscription(context, renewal)
                 onDismiss()
             }
-        }
 
-        SheetOption(
-            title = " Cancellation Guide",
-            subTitle = "Learn how to cancel your subscription",
-            icon = R.drawable.magic_search,
-            isDarkTheme = isDarkTheme
-        ) {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://www.google.com/search?q=How to cancel ${renewal.name} subscription"))
-            )
-            onDismiss()
+            GridSheetOption(
+                title = "Cancel Guide",
+                subTitle = "How to cancel",
+                icon = R.drawable.text,
+                isDarkTheme = isDarkTheme,
+                modifier = Modifier.weight(1f)
+            ) {
+                SubtlyAnalytics.logOptionCancelGuide(renewal.name)
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://www.google.com/search?q=How to cancel ${renewal.name} subscription"))
+                )
+                onDismiss()
+            }
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun GridSheetOption(
+    title: String,
+    subTitle: String,
+    icon: Int,
+    isDarkTheme: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val manropeBold = FontFamily(Font(R.font.manrope_bold))
+    val manropeMedium = FontFamily(Font(R.font.manrope_medium))
+
+    val haptic = LocalHapticFeedback.current
+
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                onClick()
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFD7D7F1)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(ThemeColors.getBackgroundColor(isDarkTheme)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(38.dp)
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                fontFamily = manropeBold,
+                color = ThemeColors.getTextColor(isDarkTheme),
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subTitle,
+                fontSize = 10.sp,
+                fontFamily = manropeMedium,
+                color = ThemeColors.getGreyColor(isDarkTheme),
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -641,6 +746,20 @@ fun SheetOption(
     }
 }
 
+private fun stableFallbackAvatarColor(seed: String): Color {
+    val colors = listOf(
+        Color(0xFF90CAF9),
+        Color(0xFFA5D6A7),
+        Color(0xFFFFCC80),
+        Color(0xFFCE93D8),
+        Color(0xFFFFAB91),
+        Color(0xFF80DEEA),
+        Color(0xFFE6EE9C)
+    )
+    val index = Math.floorMod(seed.lowercase().trim().hashCode(), colors.size)
+    return colors[index]
+}
+
 @Composable
 fun SubscriptionItem(
     sub: Subscription,
@@ -651,20 +770,11 @@ fun SubscriptionItem(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var selectedSub by remember { mutableStateOf<Subscription?>(null) }
-    val colors = listOf(
-        Color(0xFF90CAF9),
-        Color(0xFFA5D6A7),
-        Color(0xFFFFCC80),
-        Color(0xFFCE93D8),
-        Color(0xFFFFAB91),
-        Color(0xFF80DEEA),
-        Color(0xFFE6EE9C)
-    )
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
     val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
 
-    val randomColor = colors.random()
+    val fallbackColor = stableFallbackAvatarColor(sub.key.ifBlank { sub.name })
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -715,11 +825,11 @@ fun SubscriptionItem(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(randomColor),
+                                    .background(fallbackColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = sub.name.first().uppercase(),
+                                    text = sub.name.firstOrNull()?.uppercase() ?: "",
                                     color = Color.White,
                                     fontSize = 24.sp,
                                     fontFamily = manropeBold

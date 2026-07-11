@@ -10,6 +10,7 @@ import com.tracker.subscription.data.PlanUi
 import com.tracker.subscription.data.repo.BillingRepository
 import com.tracker.subscription.data.repo.PurchaseEvent
 import kotlinx.coroutines.launch
+import com.tracker.subscription.analytics.SubtlyAnalytics
 
 class PremiumViewModel(
     private val repo: BillingRepository
@@ -37,8 +38,12 @@ class PremiumViewModel(
                         isPurchasing = false
                         purchaseSuccess = true
                         isAlreadyPremium = true
+                        SubtlyAnalytics.logPremiumPurchaseSuccess()
                     }
-                    PurchaseEvent.Failed -> isPurchasing = false
+                    PurchaseEvent.Failed -> {
+                        isPurchasing = false
+                        SubtlyAnalytics.logPremiumPurchaseFailed("Billing repository returned purchase failure")
+                    }
                     PurchaseEvent.Pending -> isPurchasing = true
                 }
             }
@@ -74,6 +79,7 @@ class PremiumViewModel(
     fun purchase(activity: Activity) {
         selectedPlan?.let {
             isPurchasing = true
+            SubtlyAnalytics.logPremiumPurchaseStart()
             repo.launchPurchase(activity, it.productDetails)
         }
     }

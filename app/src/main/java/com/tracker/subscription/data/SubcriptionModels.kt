@@ -35,6 +35,7 @@ data class Renewal(
 
 data class DashboardData(
     val monthlySpend: Double,
+    val monthlySpendChangePercent: Double? = null,
     val currency: String,
     val upcomingRenewals: List<Renewal>,
     val subscriptions: List<Subscription>,
