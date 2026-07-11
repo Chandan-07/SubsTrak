@@ -37,12 +37,20 @@ object ThemeColors {
         return if (isDarkTheme) DarkSecondary else LightSecondary
     }
 
+    fun getGreenColor(isDarkTheme: Boolean): Color {
+        return if (isDarkTheme) AccentGreen else AccentGreen
+    }
+
     fun getBlueBgColor(isDarkTheme: Boolean): Color {
         return if (isDarkTheme) DarkPrime else LightWhite
     }
 
     fun getLightGreyColor(isDarkTheme: Boolean): Color {
         return if (isDarkTheme) DarkLightGrey else LightLightGrey
+    }
+
+    fun getLightWhiteBothColor(isDarkTheme: Boolean): Color {
+        return if (isDarkTheme) LightLightGrey else LightLightGrey
     }
 
     fun getCalenderBorder(isDarkTheme: Boolean): Color {

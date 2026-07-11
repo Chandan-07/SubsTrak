@@ -50,6 +50,7 @@ import com.tracker.subscription.R
 import com.tracker.subscription.data.db.OnboardingPreference
 import com.tracker.subscription.ui.data.pages
 import kotlinx.coroutines.launch
+import com.tracker.subscription.analytics.SubtlyAnalytics
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,6 +66,16 @@ fun OnboardingScreen(
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        SubtlyAnalytics.logOnboardingStart()
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage > 0) {
+            SubtlyAnalytics.logOnboardingNext(pagerState.currentPage)
+        }
+    }
 
     var pendingAdvanceFromSecondSlide by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -176,6 +187,7 @@ fun OnboardingScreen(
                 onClick = {
 
                     if (pagerState.currentPage == pages.lastIndex) {
+                        SubtlyAnalytics.logOnboardingComplete()
                         scope.launch {
                             OnboardingPreference.setCompleted(context)
                         }

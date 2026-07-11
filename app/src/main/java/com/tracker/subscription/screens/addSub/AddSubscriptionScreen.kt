@@ -192,6 +192,7 @@ fun AddSubscriptionScreen(
             reminderDaysBefore = it.reminderDaysBefore
             serviceLogo = it.logoResId ?: R.drawable.empty
             subscriptionType = it.subscriptionType
+            key = it.key
         }
         if (existingSubscription == null) {
             showSheet = true
@@ -271,11 +272,13 @@ fun AddSubscriptionScreen(
 
                     ) {
                         SelectedServiceCard(
-                            serviceName = serviceName.ifEmpty { "Ex: Netflix" }, // default or empty state
+                            serviceName = if (existingSubscription != null) serviceName else serviceName.ifEmpty { "Ex: Netflix" },
                             category = category, // you can map this
                             logoRes = service?.logo,
                             isDarkTheme = isDarkTheme,
-                            onClick = { showSheet = true }
+                            isEdit = existingSubscription != null,
+                            onServiceNameChange = { newName -> serviceName = newName },
+                            onClick = { if (existingSubscription == null) showSheet = true }
                         )
                     }
                 }
@@ -373,7 +376,7 @@ fun AddSubscriptionScreen(
                                     // Cursor
                                     cursorColor = Color(0xFF1976D2)
                                 ),
-                                trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = Color.Black)},
+                                trailingIcon = {Icon(painterResource(R.drawable.calender_pick),"", tint = ThemeColors.getGreyColor(isDarkTheme))},
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(20.dp)
                             )
@@ -446,6 +449,10 @@ fun AddSubscriptionScreen(
                         startDate != null
                     ) {
 
+                        val matchedService = viewModel.getServiceLogo(serviceName)
+                        val resolvedLogo = matchedService?.logo ?: R.drawable.empty
+                        val resolvedKey = matchedService?.key ?: ""
+
                         val subscription = Subscription(
                             id = existingSubscription?.id.toString() ?: "",
                             name = serviceName,
@@ -458,8 +465,8 @@ fun AddSubscriptionScreen(
                             reminderEnabled = reminderEnabled,
                             reminderDaysBefore = reminderDaysBefore,
                             subscriptionType = subscriptionType,
-                            logoResId = serviceLogo,
-                            key = key,
+                            logoResId = resolvedLogo,
+                            key = resolvedKey,
                             freeTrialPeriod = freeTrialPeriod
                         )
                         onSave(subscription)
@@ -545,6 +552,8 @@ fun SelectedServiceCard(
     category: String,
     logoRes: Int?,
     isDarkTheme: Boolean,
+    isEdit: Boolean = false,
+    onServiceNameChange: ((String) -> Unit)? = null,
     onClick: () -> Unit
 ) {
     val manropeRegular = FontFamily( Font(R.font.manrope_regular) )
@@ -557,7 +566,7 @@ fun SelectedServiceCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(ThemeColors.getCardBackgroundColor(isDarkTheme))
-            .clickable { onClick() }
+            .then(if (!isEdit) Modifier.clickable { onClick() } else Modifier)
             .padding(16.dp)
     ) {
 
@@ -595,32 +604,58 @@ fun SelectedServiceCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = serviceName.ifEmpty { "Select Service" },
-                    fontSize = 16.sp,
-                    fontFamily = manropeExtraBold
-                )
+                if (isEdit) {
+                    OutlinedTextField(
+                        value = serviceName,
+                        onValueChange = { onServiceNameChange?.invoke(it) },
+                        placeholder = { Text("Service Name", fontFamily = manropeMedium, fontSize = 14.sp) },
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 16.sp,
+                            fontFamily = manropeExtraBold,
+                            color = ThemeColors.getTextColor(isDarkTheme)
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = ThemeColors.getBackgroundColor(isDarkTheme),
+                            unfocusedContainerColor = ThemeColors.getBackgroundColor(isDarkTheme),
+                            focusedBorderColor = Color(0xFF2979FF),
+                            unfocusedBorderColor = ThemeColors.getLightGreyColor(isDarkTheme),
+                            cursorColor = Color(0xFF2979FF)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text(
+                        text = serviceName.ifEmpty { "Select Service" },
+                        fontSize = 16.sp,
+                        fontFamily = manropeExtraBold
+                    )
 
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = category,
-                    color = Color.Gray,
-                    fontFamily = manropeRegular,
-                    fontSize = 12.sp
-                )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = category,
+                        color = Color.Gray,
+                        fontFamily = manropeRegular,
+                        fontSize = 12.sp
+                    )
+                }
             }
 
-            // 🔵 Change Button
-            Text(
-                text = "Change",
-                color = Color(0xFF2979FF),
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme))
-                    .padding(vertical = 4.dp, horizontal = 8.dp)
-                    .clickable { onClick() }
-            )
+            if (!isEdit) {
+                Spacer(modifier = Modifier.width(8.dp))
+                // 🔵 Change Button
+                Text(
+                    text = "Change",
+                    color = Color(0xFF2979FF),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(ThemeColors.getBackgroundColor(isDarkTheme = isDarkTheme))
+                        .padding(vertical = 4.dp, horizontal = 8.dp)
+                        .clickable { onClick() }
+                )
+            }
         }
     }
 }
@@ -685,7 +720,7 @@ fun ServiceListContent (
     var query by remember { mutableStateOf("") }
 
     val categories = listOf(
-        "All", "OTT", "Music", "Productivity", "Shopping", "Fitness", "AI"
+        "All", "OTT", "Software", "Music", "Productivity", "Shopping", "Fitness", "AI"
     )
     val manropeRegular = FontFamily( Font(R.font.manrope_semi_bold) )
     val manropesemiBold = FontFamily( Font(R.font.manrope_bold) )
@@ -846,7 +881,7 @@ fun ServiceListContent (
 
                                                 onSelect(service)
                                             },
-                                            shape = RoundedCornerShape(24.dp),
+                                            shape = RoundedCornerShape(30.dp),
                                             colors = CardDefaults.cardColors(
                                                 containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
                                             ),
@@ -886,8 +921,7 @@ fun ServiceListContent (
 
                                                 Text(
                                                     text = service.name,
-                                                    maxLines = 2,
-                                                    minLines = 2,
+                                                    maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
                                                     fontFamily = manropeRegular,
                                                     fontSize = 10.sp,

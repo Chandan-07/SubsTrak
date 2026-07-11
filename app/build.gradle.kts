@@ -14,8 +14,8 @@ android {
         applicationId = "com.tracker.subscription"
         minSdk = 24
         targetSdk = 35
-        versionCode = 39
-        versionName = "1.0.39"
+        versionCode = 42
+        versionName = "1.0.42"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -116,4 +116,10 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.4.0")
     implementation("com.google.android.play:review:2.0.1")
     implementation("com.google.android.play:review-ktx:2.0.1")
+    // Import the BoM for the Firebase platform
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+
+    // Add the dependency for the Analytics library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-analytics")
 }

@@ -16,11 +16,13 @@ import com.tracker.subscription.data.Subscription
 import com.tracker.subscription.data.SubscriptionType
 import com.tracker.subscription.data.dao.SmsDataSource
 import com.tracker.subscription.data.dao.UserEntity
+import com.tracker.subscription.data.dao.SubscriptionEntity
 import com.tracker.subscription.data.repo.SubscriptionRepository
 import com.tracker.subscription.data.toDomain
 import com.tracker.subscription.screens.home.DashboardUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import com.tracker.subscription.analytics.SubtlyAnalytics
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class DashboardViewModel(
@@ -107,6 +110,8 @@ class DashboardViewModel(
                     subs.filter { it.billingCycle == "Monthly" }
                         .sumOf { it.price }
 
+                val monthlySpendChangePercent = calculateMonthlySpendChangePercent(subs, monthlySpend)
+
                 val currency = subs.firstOrNull()?.currency ?: ""
 
                 val upcomingRenewals =
@@ -153,6 +158,7 @@ class DashboardViewModel(
                 DashboardUiState.Success(
                     DashboardData(
                         monthlySpend = monthlySpend,
+                        monthlySpendChangePercent = monthlySpendChangePercent,
                         currency = currency,
                         upcomingRenewals = upcomingRenewals,
                         subscriptions = subscriptionList,
@@ -182,6 +188,7 @@ class DashboardViewModel(
 
     fun scanSms() {
         viewModelScope.launch {
+            SubtlyAnalytics.logSmsScanStart()
 
             _isLoadingSMS.value = true
 
@@ -194,8 +201,68 @@ class DashboardViewModel(
             _smsSyncState.value = smsSuggestionList
             Log.d("IOJASID", "scanSms: "+smsSuggestionList)
 
+            SubtlyAnalytics.logSmsScanSuccess(smsSuggestionList.size)
+
             _isLoadingSMS.value = false
         }
+    }
+
+    fun clearSmsSuggestions() {
+        _smsSyncState.value = emptyList()
+    }
+
+    fun addSmsSuggestionsToSubscriptions(
+        suggestionsToAdd: List<ParsedSubscription> = _smsSyncState.value
+    ) {
+        val suggestions = suggestionsToAdd
+            .distinctBy { it.service.lowercase().trim() }
+
+        if (suggestions.isEmpty()) return
+
+        viewModelScope.launch {
+            suggestions.forEach { suggestion ->
+                val service = repository.getExactService(suggestion.service)
+                val resolvedName = service?.name ?: suggestion.service
+                val resolvedCategory = service?.category ?: "Other"
+                repository.addSubscription(
+                    SubscriptionEntity(
+                        name = resolvedName,
+                        price = suggestion.amount,
+                        currency = suggestion.currency,
+                        billingCycle = "Monthly",
+                        category = resolvedCategory,
+                        subscriptionType = SubscriptionType.PAID_SUBSCRIPTION.value,
+                        startDate = suggestion.date,
+                        nextBillingDate = nextMonthlyBillingDate(suggestion.date),
+                        reminderEnabled = true,
+                        reminderDaysBefore = 1,
+                        logoResId = service?.logo,
+                        key = service?.key ?: suggestion.service
+                            .lowercase()
+                            .replace(Regex("[^a-z0-9]+"), "_")
+                            .trim('_'),
+                    )
+                )
+                SubtlyAnalytics.logSubscriptionAddSuccess(
+                    name = resolvedName,
+                    price = suggestion.amount,
+                    currency = suggestion.currency,
+                    billingCycle = "Monthly",
+                    category = resolvedCategory,
+                    type = SubscriptionType.PAID_SUBSCRIPTION.value,
+                    source = "sms"
+                )
+            }
+            SubtlyAnalytics.logSmsSyncApproved(suggestions.size)
+            _smsSyncState.value = _smsSyncState.value - suggestions
+        }
+    }
+
+    private fun nextMonthlyBillingDate(startDate: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = startDate
+            add(Calendar.MONTH, 1)
+        }.timeInMillis
     }
 
 
@@ -268,7 +335,14 @@ class DashboardViewModel(
     fun deleteSubscription(id: String) {
 
         viewModelScope.launch {
-
+            val currentSubs = (_uiState.value as? DashboardUiState.Success)?.data?.subscriptions
+            currentSubs?.find { it.id == id }?.let { sub ->
+                SubtlyAnalytics.logSubscriptionDelete(
+                    name = sub.name,
+                    price = sub.price,
+                    category = sub.category
+                )
+            }
             repository.deleteSubscription(id.toInt())
         }
     }
@@ -311,5 +385,28 @@ class DashboardViewModel(
             } else {
                 currentSubs.filter { it.category == category }
             }
+    }
+
+    private fun calculateMonthlySpendChangePercent(
+        subs: List<SubscriptionEntity>,
+        currentMonthlySpend: Double
+    ): Double? {
+        if (currentMonthlySpend <= 0) return null
+
+        val startOfCurrentMonth = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val lastMonthSpend = subs
+            .filter { it.billingCycle == "Monthly" && it.startDate < startOfCurrentMonth }
+            .sumOf { it.price }
+
+        if (lastMonthSpend <= 0) return null
+
+        return ((currentMonthlySpend - lastMonthSpend) / lastMonthSpend) * 100.0
     }
 }
