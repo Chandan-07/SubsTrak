@@ -68,6 +68,13 @@ class DashboardViewModel(
     private val _isLoadingSMS = MutableStateFlow(false)
     val isLoadingSMS = _isLoadingSMS.asStateFlow()
 
+    private val _showGreenToast = MutableStateFlow<String?>(null)
+    val showGreenToast: StateFlow<String?> = _showGreenToast.asStateFlow()
+
+    fun clearGreenToast() {
+        _showGreenToast.value = null
+    }
+
     private val _filteredSubscriptions = MutableStateFlow<List<Subscription>>(emptyList())
     val filteredSubscriptions: StateFlow<List<Subscription>> = _filteredSubscriptions
 
@@ -255,6 +262,9 @@ class DashboardViewModel(
             }
             SubtlyAnalytics.logSmsSyncApproved(suggestions.size)
             _smsSyncState.value = _smsSyncState.value - suggestions
+            val count = suggestions.size
+            val msg = if (count == 1) "1 subscription added successfully." else "$count subscriptions added successfully."
+            _showGreenToast.value = msg
         }
     }
 

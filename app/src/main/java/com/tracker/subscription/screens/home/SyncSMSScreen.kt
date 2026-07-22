@@ -11,6 +11,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,11 +23,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -58,21 +64,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.foundation.Image
+import androidx.compose.material3.Surface
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.PlatformTextStyle
 import com.tracker.subscription.R
 import com.tracker.subscription.data.ParsedSubscription
 import com.tracker.subscription.presentation.DashboardViewModel
 import com.tracker.subscription.ui.theme.ThemeColors
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -457,48 +479,130 @@ private fun SmsPermissionDialog(
     onAllow: () -> Unit,
     isDarkTheme: Boolean
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Find subscriptions automatically?",
-                fontFamily = manropeSemiBold
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(16.dp, RoundedCornerShape(28.dp)),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
+            ),
+            border = BorderStroke(
+                1.dp,
+                if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
             )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "We can scan recent SMS messages on this device to spot subscription renewals. This stays on your phone and only detected subscriptions are shown for review.",
-                    fontFamily = manropeMedium,
-                    color = ThemeColors.getTextColor(isDarkTheme)
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                SyncSourceRow(
-                    title = "Sync SMS",
-                    subtitle = "Available now",
-                    enabled = true,
-                    isDarkTheme = isDarkTheme
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                SyncSourceRow(
-                    title = "Sync Email",
-                    subtitle = "Coming later",
-                    enabled = false,
-                    isDarkTheme = isDarkTheme
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = onAllow) {
-                Text("Allow SMS scan", fontFamily = manropeSemiBold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Not now", fontFamily = manropeMedium)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+            ) {
+                // 🎨 Light Background Geometry Canvas
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    val w = size.width
+                    val h = size.height
+
+                    val geomColor1 = if (isDarkTheme) {
+                        Color(0xFF3B82F6).copy(alpha = 0.08f)
+                    } else {
+                        Color(0xFF2563EB).copy(alpha = 0.06f)
+                    }
+
+                    val geomColor2 = if (isDarkTheme) {
+                        Color(0xFF8B5CF6).copy(alpha = 0.06f)
+                    } else {
+                        Color(0xFF60A5FA).copy(alpha = 0.07f)
+                    }
+
+                    // 1. Top-Right Rotated Accent Squircle
+                    drawRoundRect(
+                        color = geomColor1,
+                        topLeft = Offset(w * 0.65f, -h * 0.15f),
+                        size = Size(w * 0.45f, w * 0.45f),
+                        cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx())
+                    )
+
+                    // 2. Bottom-Left Light Ambient Circle
+                    drawCircle(
+                        color = geomColor2,
+                        center = Offset(w * 0.12f, h * 0.88f),
+                        radius = 55.dp.toPx()
+                    )
+
+                    // 3. Top-Right Geometric Ring Stroke
+                    drawCircle(
+                        color = geomColor1,
+                        center = Offset(w * 0.82f, h * 0.18f),
+                        radius = 65.dp.toPx(),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "Sync your SMS ✨",
+                        fontSize = 20.sp,
+                        fontFamily = manropeSemiBold,
+                        color = ThemeColors.getHeaderColor(isDarkTheme)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Everything stays on your device, and only detected subscriptions are shown for review.",
+                        fontFamily = manropeMedium,
+                        fontSize = 13.5.sp,
+                        lineHeight = 19.5.sp,
+                        color = ThemeColors.getGreyColor(isDarkTheme)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    SyncSourceRow(
+                        title = "Sync SMS",
+                        subtitle = "⚡ Fetch in seconds",
+                        enabled = true,
+                        isDarkTheme = isDarkTheme
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text(
+                                text = "Not now",
+                                fontFamily = manropeMedium,
+                                color = ThemeColors.getGreyColor(isDarkTheme)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Button(
+                            onClick = onAllow,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ThemeColors.getPrimaryColor(isDarkTheme)
+                            )
+                        ) {
+                            Text(
+                                text = "Allow SMS scan",
+                                fontFamily = manropeSemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
@@ -528,10 +632,10 @@ private fun SyncSourceRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.sync),
+                    painter = painterResource(R.drawable.sms_sync),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -544,7 +648,7 @@ private fun SyncSourceRow(
                     text = subtitle,
                     fontSize = 12.sp,
                     fontFamily = manropeMedium,
-                    color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = alpha)
+                    color = ThemeColors.getGreyColor(isDarkTheme).copy(alpha = alpha)
                 )
             }
         }
@@ -620,97 +724,24 @@ private fun SmsSyncResultsDialog(
 ) {
     var reviewSuggestions by remember(suggestions) { mutableStateOf(suggestions) }
     var selectedSuggestions by remember(suggestions) { mutableStateOf<List<ParsedSubscription>>(emptyList()) }
-    var pendingSummary by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
-    if (pendingSummary != null) {
-        val (addedCount, pendingCount) = pendingSummary!!
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = {
-                Text(
-                    text = "Subscription Limit Reached",
-                    fontFamily = manropeSemiBold
-                )
-            },
-            text = {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(ThemeColors.getBlueBgColor(isDarkTheme))
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "$addedCount",
-                                fontFamily = manropeExtraBold,
-                                fontSize = 22.sp,
-                                color = Color(0xFF2E7D32)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Added",
-                                fontSize = 12.sp,
-                                fontFamily = manropeMedium,
-                                color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.7f)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(width = 1.dp, height = 32.dp)
-                                .background(ThemeColors.getLightGreyColor(isDarkTheme))
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "$pendingCount",
-                                fontFamily = manropeExtraBold,
-                                fontSize = 22.sp,
-                                color = ThemeColors.getOrangeColor(isDarkTheme)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Pending",
-                                fontSize = 12.sp,
-                                fontFamily = manropeMedium,
-                                color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Free accounts can track up to 5 subscriptions. Upgrade to Premium to add all $pendingCount pending subscriptions!",
-                        fontFamily = manropeMedium,
-                        color = ThemeColors.getTextColor(isDarkTheme),
-                        fontSize = 14.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = onNavigateToPremium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ThemeColors.getPrimaryColor(isDarkTheme)
-                    )
-                ) {
-                    Text("Unlock Premium", fontFamily = manropeSemiBold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Done", fontFamily = manropeMedium)
-                }
-            }
-        )
-        return
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 20.dp)
+            ) {
+                // 1. Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -745,87 +776,158 @@ private fun SmsSyncResultsDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                // 2. Badges Row
+                val remainingCapacity = maxOf(0, 5 - currentSubCount)
+                val selectedCount = if (isPremium) selectedSuggestions.size else minOf(selectedSuggestions.size, remainingCapacity)
+                val pendingCount = if (isPremium) 0 else maxOf(0, selectedSuggestions.size - remainingCapacity)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(ThemeColors.getBlueBgColor(isDarkTheme))
-                            .border(1.dp, ThemeColors.getPrimaryColor(isDarkTheme).copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    // Found Badge
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Found: ",
-                                fontSize = 11.sp,
-                                fontFamily = manropeMedium,
-                                color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.7f)
-                            )
+                        Text(
+                            text = "Found",
+                            fontSize = 11.sp,
+                            fontFamily = manropeMedium,
+                            color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.7f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(ThemeColors.getPrimaryColor(isDarkTheme).copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = "${reviewSuggestions.size}",
-                                fontSize = 12.sp,
-                                fontFamily = manropeExtraBold,
-                                color = ThemeColors.getPrimaryColor(isDarkTheme)
+                                fontSize = 10.sp,
+                                fontFamily = manropeBold,
+                                color = ThemeColors.getPrimaryColor(isDarkTheme),
+                                textAlign = TextAlign.Center,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                )
                             )
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                if (selectedSuggestions.isNotEmpty()) Color(0xFFE8F5E9) else ThemeColors.getBlueBgColor(isDarkTheme)
-                            )
-                            .border(
-                                1.dp,
-                                if (selectedSuggestions.isNotEmpty()) Color(0xFF81C784) else ThemeColors.getTextGreyColor(isDarkTheme).copy(alpha = 0.3f),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Selected Badge
+                    val selectedActiveColor = if (isDarkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
+                    val selectedBgColor = if (isDarkTheme) Color(0xFF1B5E20).copy(alpha = 0.3f) else Color(0xFFE8F5E9)
+
+                    if (selectedCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = "Selected: ",
+                                text = "Selected",
                                 fontSize = 11.sp,
                                 fontFamily = manropeMedium,
-                                color = if (selectedSuggestions.isNotEmpty()) Color(0xFF2E7D32) else ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.7f)
+                                color = selectedActiveColor
                             )
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(selectedBgColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "$selectedCount",
+                                    fontSize = 10.sp,
+                                    fontFamily = manropeBold,
+                                    color = selectedActiveColor,
+                                    textAlign = TextAlign.Center,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Pending Badge
+                    val pendingActiveColor = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFE65100)
+                    val pendingBgColor = if (isDarkTheme) Color(0xFFFFB74D).copy(alpha = 0.18f) else Color(0xFFFFF3E0)
+
+                    if (pendingCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = "${selectedSuggestions.size}",
-                                fontSize = 12.sp,
-                                fontFamily = manropeExtraBold,
-                                color = if (selectedSuggestions.isNotEmpty()) Color(0xFF2E7D32) else ThemeColors.getTextColor(isDarkTheme)
+                                text = "Pending",
+                                fontSize = 11.sp,
+                                fontFamily = manropeMedium,
+                                color = pendingActiveColor
                             )
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(pendingBgColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "$pendingCount",
+                                    fontSize = 10.sp,
+                                    fontFamily = manropeBold,
+                                    color = pendingActiveColor,
+                                    textAlign = TextAlign.Center,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    )
+                                )
+                            }
                         }
                     }
                 }
-            }
-        },
-        text = {
-            Column {
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 3. Suggestions List
                 if (reviewSuggestions.isEmpty()) {
-                    Text(
-                        text = if (suggestions.isEmpty()) {
-                            "Nothing importable showed up this time."
-                        } else {
-                            "All suggestions have been handled."
-                        },
-                        fontFamily = manropeMedium,
-                        color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.72f)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (suggestions.isEmpty()) {
+                                "Nothing importable showed up this time."
+                            } else {
+                                "All suggestions have been handled."
+                            },
+                            fontFamily = manropeMedium,
+                            color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.72f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 } else {
                     LazyColumn(
                         modifier = Modifier.height(280.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(reviewSuggestions) { suggestion ->
+                            val selectedIndex = selectedSuggestions.indexOf(suggestion)
+                            val isSelected = selectedIndex != -1
+                            val remainingCapacity = maxOf(0, 5 - currentSubCount)
+                            val isAdded = isSelected && (isPremium || selectedIndex < remainingCapacity)
+                            val isPending = isSelected && !isPremium && selectedIndex >= remainingCapacity
+
                             SmsSuggestionItem(
                                 suggestion = suggestion,
                                 isDarkTheme = isDarkTheme,
-                                isSelected = selectedSuggestions.contains(suggestion),
+                                isAdded = isAdded,
+                                isPending = isPending,
                                 onRemove = {
                                     reviewSuggestions = reviewSuggestions - suggestion
                                     selectedSuggestions = selectedSuggestions - suggestion
@@ -842,102 +944,191 @@ private fun SmsSyncResultsDialog(
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            if (reviewSuggestions.isEmpty()) {
-                Button(onClick = onDismiss) {
-                    Text("Done", fontFamily = manropeSemiBold)
-                }
-            } else {
-                Button(
-                    enabled = selectedSuggestions.isNotEmpty(),
-                    onClick = {
-                        if (isPremium) {
-                            onAddSuggestions(selectedSuggestions)
-                            onDismiss()
+
+                // 4. Sticky Bottom Warning Banner
+                val pendingSuggestions = remember(selectedSuggestions, isPremium, currentSubCount) {
+                    if (isPremium) emptyList()
+                    else {
+                        if (selectedSuggestions.size > remainingCapacity) {
+                            selectedSuggestions.drop(remainingCapacity)
                         } else {
-                            val remainingCapacity = maxOf(0, 5 - currentSubCount)
-                            if (selectedSuggestions.size <= remainingCapacity) {
-                                onAddSuggestions(selectedSuggestions)
-                                onDismiss()
-                            } else {
-                                val added = selectedSuggestions.take(remainingCapacity)
-                                val pendingCount = selectedSuggestions.size - remainingCapacity
-                                if (added.isNotEmpty()) {
-                                    onAddSuggestions(added)
-                                }
-                                pendingSummary = Pair(added.size, pendingCount)
-                            }
+                            emptyList()
                         }
                     }
+                }
+                val hasPending = pendingSuggestions.isNotEmpty()
+
+                if (hasPending) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isDarkTheme) Color(0xFFEF6C00).copy(alpha = 0.12f) else Color(0xFFFFF3E0))
+                            .border(1.dp, if (isDarkTheme) Color(0xFFFFB74D).copy(alpha = 0.2f) else Color(0xFFFFE082), RoundedCornerShape(10.dp))
+                            .clickable {
+                                onNavigateToPremium()
+                                onDismiss()
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "👑",
+                                fontSize = 13.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = buildAnnotatedString {
+                                    append("${pendingSuggestions.size} items pending. ")
+                                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)) {
+                                        append("Upgrade to Import")
+                                    }
+                                },
+                                fontFamily = manropeMedium,
+                                fontSize = 11.sp,
+                                color = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFE65100)
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(id = R.drawable.arrow_right),
+                            contentDescription = null,
+                            tint = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFE65100),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 5. Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Add to subscription list", fontFamily = manropeSemiBold)
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = if (reviewSuggestions.isEmpty()) "Dismiss" else "Skip",
+                            fontFamily = manropeMedium,
+                            color = ThemeColors.getTextGreyColor(isDarkTheme)
+                        )
+                    }
+
+                    if (reviewSuggestions.isNotEmpty()) {
+                        val isUnlockState = selectedCount == 0 && pendingCount > 0
+                        Button(
+                            enabled = selectedSuggestions.isNotEmpty(),
+                            onClick = {
+                                if (isUnlockState) {
+                                    onNavigateToPremium()
+                                    onDismiss()
+                                } else {
+                                    if (isPremium) {
+                                        onAddSuggestions(selectedSuggestions)
+                                    } else {
+                                        val activeSuggestions = selectedSuggestions.take(remainingCapacity)
+                                        if (activeSuggestions.isNotEmpty()) {
+                                            onAddSuggestions(activeSuggestions)
+                                        }
+                                    }
+                                    onDismiss()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ThemeColors.getPrimaryColor(isDarkTheme)
+                            )
+                        ) {
+                            Text(
+                                text = if (isUnlockState) "Unlock to premium" else "Add to subscription list",
+                                fontFamily = manropeSemiBold
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ThemeColors.getPrimaryColor(isDarkTheme)
+                            )
+                        ) {
+                            Text(
+                                text = "Done",
+                                fontFamily = manropeSemiBold
+                            )
+                        }
+                    }
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Skip", fontFamily = manropeMedium)
-            }
         }
-    )
+    }
 }
 
 @Composable
 private fun SmsSuggestionItem(
     suggestion: ParsedSubscription,
     isDarkTheme: Boolean,
-    isSelected: Boolean,
+    isAdded: Boolean,
+    isPending: Boolean,
     onRemove: () -> Unit,
     onAdd: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                Color(0xFFE8F5E9)
+            containerColor = if (isAdded) {
+                if (isDarkTheme) Color(0xFF1B5E20).copy(alpha = 0.24f) else Color(0xFFE8F5E9)
+            } else if (isPending) {
+                if (isDarkTheme) Color(0xFFE65100).copy(alpha = 0.2f) else Color(0xFFFFF3E0)
             } else {
                 ThemeColors.getBlueBgColor(isDarkTheme)
             }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = suggestion.service,
+                        text = suggestion.service.trim(),
                         fontFamily = manropeBold,
-                        color = ThemeColors.getTextColor(isDarkTheme)
+                        color = ThemeColors.getTextColor(isDarkTheme),
+                        fontSize = 14.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Spent on ${formatSpentDate(suggestion.date)}",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontFamily = manropeMedium,
                         color = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.68f)
                     )
                 }
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Remove suggestion",
                         tint = ThemeColors.getTextColor(isDarkTheme).copy(alpha = 0.62f),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -947,26 +1138,51 @@ private fun SmsSuggestionItem(
                     text = "${suggestion.currency}${suggestion.amount}",
                     fontFamily = manropeSemiBold,
                     color = ThemeColors.getDarkBlueColor(isDarkTheme),
-                    fontSize = 18.sp
+                    fontSize = 16.sp
                 )
-                TextButton(onClick = onAdd) {
-                    Icon(
-                        imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Add,
-                        contentDescription = null,
-                        tint = if (isSelected) Color(0xFF2E7D32) else Color.Unspecified,
-                        modifier = Modifier.size(16.dp)
-                    )
+                TextButton(
+                    onClick = onAdd,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    if (isPending) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.timer),
+                            contentDescription = null,
+                            tint = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFE65100),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isAdded) Icons.Default.Check else Icons.Default.Add,
+                            contentDescription = null,
+                            tint = if (isAdded) {
+                                if (isDarkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
+                            } else {
+                                Color.Unspecified
+                            },
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.size(4.dp))
                     Text(
-                        text = if (isSelected) "Added" else "Add",
-                        color = if (isSelected) Color(0xFF2E7D32) else Color.Unspecified,
-                        fontFamily = if (isSelected) manropeSemiBold else manropeMedium
+                        text = if (isAdded) "Added" else if (isPending) "Pending" else "Add",
+                        color = if (isAdded) {
+                            if (isDarkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
+                        } else if (isPending) {
+                            if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFE65100)
+                        } else {
+                            Color.Unspecified
+                        },
+                        fontFamily = if (isAdded || isPending) manropeSemiBold else manropeMedium,
+                        fontSize = 11.sp
                     )
                 }
             }
         }
     }
 }
+
 
 private fun formatSpentDate(date: Long): String {
     return SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(date))

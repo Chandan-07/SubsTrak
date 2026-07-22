@@ -65,6 +65,10 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tracker.subscription.R
@@ -100,6 +104,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
     if (selectedRenewal != null) {
         SubscriptionOptionsSheet(
             renewal = selectedRenewal!!,
+            service = service,
             isDarkTheme = isDarkTheme,
             onEdit = { ren ->
                 selectedRenewal = null
@@ -277,23 +282,23 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = renewalDateText(renewal.nextBillingDate, renewal.subscriptionType),
-                        color = colorResource(R.color.dark_grey),
-                        fontSize = 12.sp,
-                        fontFamily = manropeMedium
-                    )
-                    Text(
-                        text = "• " + remainingTimeText(renewal.daysLeft, renewal.subscriptionType),
-                        color = renewalColor(renewal.daysLeft),
-                        fontSize = 12.sp,
-                        fontFamily = manropeBold
-                    )
-                }
+                Text(
+                    text = buildAnnotatedString {
+                        append(renewalDateText(renewal.nextBillingDate, renewal.subscriptionType))
+                        append("  •  ")
+                        withStyle(SpanStyle(color = renewalColor(renewal.daysLeft), fontFamily = manropeBold)) {
+                            append(remainingTimeText(renewal.daysLeft, renewal.subscriptionType))
+                        }
+                    },
+                    color = colorResource(R.color.dark_grey),
+                    fontSize = 11.sp,
+                    fontFamily = manropeMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Box(
                     modifier = Modifier
@@ -361,6 +366,7 @@ fun RenewalItem(renewal: Renewal, context: Context, service: Service?,
 @Composable
 fun SubscriptionOptionsSheet(
     renewal: Renewal,
+    service: Service?,
     isDarkTheme: Boolean,
     onEdit: ((Renewal) -> Unit)? = null,
     onDelete: ((Renewal) -> Unit)? = null,
@@ -384,8 +390,9 @@ fun SubscriptionOptionsSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val painter = runCatching {
-                if (renewal.logoResId != null && renewal.logoResId != 0 && renewal.logoResId != R.drawable.empty) {
-                    painterResource(id = renewal.logoResId!!)
+                val logoId = service?.logo ?: renewal.logoResId
+                if (logoId != null && logoId != 0 && logoId != R.drawable.empty) {
+                    painterResource(id = logoId)
                 } else null
             }.getOrNull()
 
@@ -646,7 +653,7 @@ fun GridSheetOption(
                 onClick()
             },
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFD7D7F1)
+            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFFFE2C2)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
     ) {

@@ -156,7 +156,7 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             val firebaseUser = FirebaseAuth.getInstance().currentUser
             val destination = when {
-                firebaseUser != null -> "dashboard"
+                firebaseUser != null || isAuthSkipped == true || isLoggedIn == true -> "dashboard"
                 onboardingCompleted == true -> "auth"
                 else -> "onboarding"
             }
@@ -334,6 +334,7 @@ class MainActivity : ComponentActivity() {
                     composable("onboarding") {
 
                         OnboardingScreen(
+                            isDarkTheme = isDarkTheme,
                             onGetStarted = {
                                 navController.navigate("auth")
                             }
@@ -385,6 +386,7 @@ class MainActivity : ComponentActivity() {
                         Box1 {
                             AuthScreen(
                                 isLoading = isLoading,
+                                isDarkTheme = isDarkTheme,
                                 onGoogleSignIn = {
                                     if (!isLoading) {
                                         SubtlyAnalytics.logSignInStart()
@@ -677,6 +679,15 @@ class MainActivity : ComponentActivity() {
                                 onThemeToggle = { newTheme ->
                                         currentTheme = newTheme
                                 },
+                                 onReplayOnboarding = {
+                                     coroutineScope.launch {
+                                         OnboardingPreference.setCompleted(context, false)
+                                         OnboardingPreference.setAuthSkipped(context, false)
+                                         navController.navigate("onboarding") {
+                                             popUpTo(0) { inclusive = true }
+                                         }
+                                     }
+                                 },
                                 onSignOut = {
                                     viewModel.setLoading(true)
 
@@ -685,9 +696,10 @@ class MainActivity : ComponentActivity() {
                                             googleAuthClient.signOut()
                                             FirebaseAuth.getInstance().signOut()
                                             billingRepository.clearPremiumOnSignOut()
-                                            OnboardingPreference.setGuestPremiumOwned(context, false)
-                                            OnboardingPreference.setLoggedIn(context, false)
-                                            viewModel.onSignOut()
+                                             OnboardingPreference.setGuestPremiumOwned(context, false)
+                                             OnboardingPreference.setLoggedIn(context, false)
+                                             OnboardingPreference.setAuthSkipped(context, false)
+                                             viewModel.onSignOut()
                                             SubtlyAnalytics.logSignOut()
                                             navController.navigate("auth") {
                                                 popUpTo(0)
@@ -726,6 +738,7 @@ class MainActivity : ComponentActivity() {
                 optionsSheetRenewal?.let { renewal ->
                     SubscriptionOptionsSheet(
                         renewal = renewal,
+                        service = viewModel.getServiceByKey(renewal.key),
                         isDarkTheme = isDarkTheme,
                         onDismiss = { viewModel.dismissOptionsSheet() }
                     )

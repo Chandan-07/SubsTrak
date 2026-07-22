@@ -17,7 +17,8 @@ object SubscriptionRenewalCalendar {
         val name: String,
         val logoResId: Int?,
         val price: Double,
-        val currency: String
+        val currency: String,
+        val key: String
         )
 
     fun renewalEventsForMonth(
@@ -51,7 +52,7 @@ object SubscriptionRenewalCalendar {
                 SubscriptionType.FREE_TRIAL.value -> {
                     if (nextMs in startMs..endMs) {
                         result.getOrPut(nextMs) { mutableListOf() }.add(
-                            DayEvent(sub.id, sub.name, sub.logoResId, sub.price, sub.currency)
+                            DayEvent(sub.id, sub.name, sub.logoResId, sub.price, sub.currency, sub.key)
                         )
                     }
                 }
@@ -76,7 +77,7 @@ object SubscriptionRenewalCalendar {
                     guard = 0
                     while (cursor in startMs..endMs && guard < 600) {
                         result.getOrPut(cursor) { mutableListOf() }.add(
-                            DayEvent(sub.id, sub.name, sub.logoResId, sub.price, sub.currency)
+                            DayEvent(sub.id, sub.name, sub.logoResId, sub.price, sub.currency, sub.key)
                         )
                         cursor = Utility.calculateNextBillingDate(
                             cursor,

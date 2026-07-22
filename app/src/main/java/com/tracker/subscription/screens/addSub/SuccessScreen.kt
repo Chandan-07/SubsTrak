@@ -79,7 +79,7 @@ fun SuccessScreen(
 
             launchSingleTop = true
         }
-//        launchReviewFlow(activity)
+        launchReviewFlow(activity)
     }
     val progress by animateLottieCompositionAsState(
         composition = composition,

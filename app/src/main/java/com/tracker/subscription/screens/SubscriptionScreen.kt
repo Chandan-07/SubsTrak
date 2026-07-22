@@ -119,34 +119,31 @@ fun SubscriptionScreen(
                     if (data.subscriptions.isEmpty()) {
 
                         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                            Spacer(modifier = Modifier.height(30.dp))
                             Icon(
-                                painter = painterResource(R.drawable.empty_task),
+                                painter = painterResource(R.drawable.no_subs),
                                 contentDescription = null,
                                 tint = Color.Unspecified,
                                 modifier = Modifier
-                                    .width(200.dp)
-                                    .height(120.dp)
+                                    .width(80.dp)
+                                    .height(80.dp)
                             )
+
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
                                 "No Subscriptions Yet",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = colorResource(R.color.dark_blue),
-                                fontSize = 26.sp,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.SemiBold
+                                color = ThemeColors.getTextColor(isDarkTheme),
+                                fontSize = 18.sp,
+                                fontFamily = manropeBold
                             )
-
-                            Spacer(modifier = Modifier.height(10.dp))
 
                             Text(
                                 "Add your first subscription to start tracking spending.",
                                 textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(start = 30.dp, end = 30.dp)
+                                fontFamily = manropeMedium,
+                                color = ThemeColors.getDarkBlueColor(isDarkTheme),
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(start = 24.dp, end = 24.dp)
                             )
                         }
 

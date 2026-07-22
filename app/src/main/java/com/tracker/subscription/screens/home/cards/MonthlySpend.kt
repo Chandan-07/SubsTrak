@@ -416,7 +416,7 @@ fun PremiumTag() {
                 )
             )
             .border(1.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 2.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("👑", fontSize = 12.sp)
@@ -447,7 +447,7 @@ fun FreeTag(isDarkTheme: Boolean) {
                 )
             )
             .border(0.2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

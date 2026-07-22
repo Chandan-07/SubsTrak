@@ -1,8 +1,12 @@
 package com.tracker.subscription.screens
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -60,7 +65,8 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onLogin: () -> Unit,
     isDarkTheme: Boolean = false,
-    onThemeToggle: (Boolean) -> Unit = {}
+    onThemeToggle: (Boolean) -> Unit = {},
+    onReplayOnboarding: () -> Unit = {}
 ) {
     val manropeBold = FontFamily( Font(R.font.manrope_bold) )
     val manropeExtraBold = FontFamily( Font(R.font.manrope_extra_bold) )
@@ -73,11 +79,13 @@ fun ProfileScreen(
     val bgColor = if (isDarkTheme) Color(0xFF121212) else Color.White
     val textColor = if (isDarkTheme) Color.White else colorResource(R.color.dark_grey)
     val cardBgColor = if (isDarkTheme) Color(0xFF2A2A2A) else colorResource(R.color.blue_bg_light)
+    val scrollState = rememberScrollState()
     
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(bgColor)
+            .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
 
@@ -100,58 +108,9 @@ fun ProfileScreen(
         Spacer(Modifier.height(40.dp))
 
         // 👤 Profile Card
-        if (user != null){
-            user.let {
-                ProfileCard(user, isDarkTheme)
-                Spacer(Modifier.height(16.dp))
-
-
-
-                Spacer(Modifier.height(16.dp))
-
-
-
-                Spacer(Modifier.height(16.dp))
-
-                // ⚙️ Options
-                PremiumItem("Current Plan", isPremium, isDarkTheme)
-                OptionItem("Personal Details", "Member since 2026", isDarkTheme)
-                OptionItem("Help & Support", "FAQs & contact", isDarkTheme)
-                
-                // Theme Toggle
-                ThemeToggleItem(isDarkTheme) { newTheme ->
-                    scope.launch {
-                        OnboardingPreference.setDarkTheme(context, newTheme)
-                        themeState = newTheme
-                        onThemeToggle(newTheme)
-                    }
-                }
-                
-                Spacer(Modifier.height(8.dp))
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(ThemeColors.getBackgroundColor(isDarkTheme))
-                        .clickable {
-                            showLogoutDialog = true
-                        }
-                        .padding(vertical = 6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(cardBgColor)
-                            .padding(16.dp),
-                    ) {
-                        Column {
-                            Text("Sign Out", color = Color.Red, fontSize = 14.sp, fontFamily = manropeExtraBold)
-                        }
-
-                    }
-                }
-            }
-        } else{
+        if (user != null) {
+            ProfileCard(user, isDarkTheme)
+        } else {
             Card(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
@@ -161,40 +120,32 @@ fun ProfileScreen(
             ) {
                 Column(
                     modifier = Modifier
-                        .background(bgColor)
+                        .background(cardBgColor)
                         .padding(20.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
-                    Box {
-                        // Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(ThemeColors.getDarkBlueColor(isDarkTheme)),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(90.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFFFFFF)),
+                                .background(Color(0xFFC6FF00)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(90.dp)
-                                    .clip(CircleShape)
-                                    .background(colorResource(R.color.lime)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "G",
-                                    fontSize = 28.sp,
-                                    color = Color.Black,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-
+                            Text(
+                                text = "G",
+                                fontSize = 28.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-
-
                     }
                     Spacer(Modifier.height(12.dp))
 
@@ -218,8 +169,73 @@ fun ProfileScreen(
                             .padding(top = 3.dp, bottom = 6.dp, start = 20.dp, end = 20.dp),
                         textAlign = TextAlign.Center
                     )
+                }
+            }
+        }
 
+        Spacer(Modifier.height(24.dp))
 
+        // ⚙️ Options (shown for everyone!)
+        PremiumItem("Current Plan", isPremium, isDarkTheme)
+        OptionItem("Help & Support", "FAQs & contact", isDarkTheme)
+        OptionItem(
+            title = "Rate App",
+            subtitle = "Support us on the Google Play Store",
+            isDarkTheme = isDarkTheme,
+            onClick = {
+                val packageName = context.packageName
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("market://details?id=$packageName")
+                    setPackage("com.android.vending")
+                }
+                runCatching {
+                    context.startActivity(intent)
+                }.onFailure {
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+                    }
+                }
+            }
+        )
+
+        OptionItem(
+            title = "Quick Tour",
+            subtitle = "Replay app introduction walkthrough",
+            isDarkTheme = isDarkTheme,
+            onClick = onReplayOnboarding
+        )
+
+        // Theme Toggle
+        ThemeToggleItem(isDarkTheme) { newTheme ->
+            scope.launch {
+                OnboardingPreference.setDarkTheme(context, newTheme)
+                themeState = newTheme
+                onThemeToggle(newTheme)
+            }
+        }
+
+        // Sign Out (shown only if logged in!)
+        if (user != null) {
+            Spacer(Modifier.height(8.dp))
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(ThemeColors.getBackgroundColor(isDarkTheme))
+                    .clickable {
+                        showLogoutDialog = true
+                    }
+                    .padding(vertical = 6.dp, horizontal = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardBgColor)
+                        .padding(16.dp),
+                ) {
+                    Column {
+                        Text("Sign Out", color = Color.Red, fontSize = 14.sp, fontFamily = manropeExtraBold)
+                    }
                 }
             }
         }
@@ -375,7 +391,7 @@ fun ProfileCard(user: AuthUser, isDarkTheme: Boolean) {
 
 
     @Composable
-    fun OptionItem(title: String, subtitle: String, isDarkTheme: Boolean) {
+    fun OptionItem(title: String, subtitle: String, isDarkTheme: Boolean, onClick: () -> Unit = {}) {
         val manropeBold = FontFamily( Font(R.font.manrope_bold) )
         val manropeMedium = FontFamily( Font(R.font.manrope_medium) )
         val cardBgColor = if (isDarkTheme) Color(0xFF2A2A2A) else colorResource(R.color.blue_bg_light)
@@ -386,20 +402,30 @@ fun ProfileCard(user: AuthUser, isDarkTheme: Boolean) {
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp)
+                .clickable { onClick() }
+                .padding(vertical = 8.dp, horizontal = 10.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(cardBgColor)
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(title, fontFamily = manropeBold, fontSize = 14.sp, color = textColor)
                     Spacer(Modifier.height(3.dp))
                     Text(subtitle, color = subtextColor, fontFamily = manropeMedium, fontSize = 12.sp)
                 }
 
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = subtextColor,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     }
@@ -414,7 +440,7 @@ fun ProfileCard(user: AuthUser, isDarkTheme: Boolean) {
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp)
+                .padding(vertical = 6.dp, horizontal = 10.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -445,13 +471,13 @@ fun ProfileCard(user: AuthUser, isDarkTheme: Boolean) {
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp)
+                .padding(vertical = 6.dp, horizontal = 10.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(cardBgColor)
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

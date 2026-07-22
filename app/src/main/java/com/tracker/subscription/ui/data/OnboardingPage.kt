@@ -10,18 +10,18 @@ data class OnboardingPage(
 
 val pages = listOf(
     OnboardingPage(
-        "Track All Subscriptions",
-        "Manage all your services in one place.",
+        "Subscription Management, Simplified",
+        "See every recurring charge in one beautiful dashboard. Stop guessing where your money goes.",
         R.drawable.onboard_title
     ),
     OnboardingPage(
-        "Never Miss Any Renewals",
-        "Get reminders before subscriptions renew.",
+        "Never Pay More Than You Should",
+        "Get smart, proactive alerts before free trials end and expensive renewals hit your card.",
         R.drawable.notification_svg
     ),
     OnboardingPage(
-        "Control Your Spending",
-        "See how much you spend monthly on subscriptions.",
+        "Save More with Every Cancellation",
+        "Pause or cancel unused services with a swipe. Instantly unlock hidden savings.",
         R.drawable.analytics
     )
 )

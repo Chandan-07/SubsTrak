@@ -18,9 +18,9 @@ object OnboardingPreference {
     val Context.dataStore by preferencesDataStore(name = "settings")
 
     // ✅ Onboarding
-    suspend fun setCompleted(context: Context) {
+    suspend fun setCompleted(context: Context, value: Boolean = true) {
         context.dataStore.edit {
-            it[ONBOARDING_KEY] = true
+            it[ONBOARDING_KEY] = value
         }
     }
 
@@ -31,9 +31,9 @@ object OnboardingPreference {
     }
 
     // ✅ Auth Skipped
-    suspend fun setAuthSkipped(context: Context) {
+    suspend fun setAuthSkipped(context: Context, value: Boolean = true) {
         context.dataStore.edit {
-            it[AUTH_SKIPPED_KEY] = true
+            it[AUTH_SKIPPED_KEY] = value
         }
     }
 

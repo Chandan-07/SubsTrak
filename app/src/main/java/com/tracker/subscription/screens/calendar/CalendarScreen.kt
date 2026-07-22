@@ -18,6 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.layout.ContentScale
+import java.util.Date
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -31,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +60,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -135,6 +142,11 @@ fun CalendarScreen(
 
         is DashboardUiState.Success -> {
             val subscriptions = (state as DashboardUiState.Success).data.subscriptions
+            val upcomingSubs = remember(subscriptions) {
+                subscriptions
+                    .filter { it.nextBillingDate >= System.currentTimeMillis() }
+                    .sortedBy { it.nextBillingDate }
+            }
             val eventsByDay = remember(
                 subscriptions,
                 year,
@@ -267,62 +279,202 @@ fun CalendarScreen(
 
                     }
                     item {
-                        Column {
-                            Spacer(modifier = Modifier.height(20.dp))
+                        if (subscriptions.isNotEmpty()) {
+                            Column {
+                                Spacer(modifier = Modifier.height(20.dp))
 
-                            Text(
-                                text = "Monthly Insights💡",
-                                fontSize = 20.sp,
-                                fontFamily = manropeBold,
-                                color = ThemeColors.getHeaderColor(isDarkTheme)
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
-                                ),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 2.dp
+                                Text(
+                                    text = "Monthly Insights",
+                                    fontSize = 20.sp,
+                                    fontFamily = manropeBold,
+                                    color = ThemeColors.getHeaderColor(isDarkTheme)
                                 )
-                            ) {
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 8.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(22.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = ThemeColors.getCardBackgroundColor(isDarkTheme)
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 2.dp
+                                    )
                                 ) {
 
-                                    InsightItem(
-                                        isDarkTheme,
-                                        modifier = Modifier.weight(1f),
-                                        emoji = R.drawable.timer,
-                                        title = "Renewals",
-                                        value = totalRenewals.toString()
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
 
-                                    InsightItem(
-                                        isDarkTheme,
-                                        modifier = Modifier.weight(1f),
-                                        emoji = R.drawable.money,
-                                        title = "Total",
-                                        value = formatCurrency(totalAmount, highestSubscription?.currency?:"$")
-                                    )
+                                        InsightItem(
+                                            isDarkTheme,
+                                            modifier = Modifier.weight(1f),
+                                            emoji = R.drawable.timer,
+                                            title = "Renewals",
+                                            value = totalRenewals.toString()
+                                        )
 
-                                    InsightItem(
-                                        isDarkTheme,
-                                        modifier = Modifier.weight(1f),
-                                        emoji = R.drawable.crown,
-                                        title = "Highest",
-                                        value = highestSubscription?.name.toString()
-                                    )
+                                        InsightItem(
+                                            isDarkTheme,
+                                            modifier = Modifier.weight(1f),
+                                            emoji = R.drawable.money,
+                                            title = "Total",
+                                            value = formatCurrency(totalAmount, highestSubscription?.currency?:"$")
+                                        )
+
+                                        InsightItem(
+                                            isDarkTheme,
+                                            modifier = Modifier.weight(1f),
+                                            emoji = R.drawable.crown,
+                                            title = "Highest",
+                                            value = highestSubscription?.name.toString()
+                                        )
+                                    }
                                 }
                             }
                         }
+                    }
 
+                    item {
+                        if (upcomingSubs.isNotEmpty()) {
+                            Column {
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Text(
+                                    text = "Upcoming Renewals",
+                                    fontSize = 20.sp,
+                                    fontFamily = manropeBold,
+                                    color = ThemeColors.getHeaderColor(isDarkTheme)
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 30.dp)
+                                        .clip(RoundedCornerShape(15.dp))
+                                        .background(ThemeColors.getCardBackgroundColor(isDarkTheme))
+                                        .border(1.dp, ThemeColors.getLightGreyColor(isDarkTheme), RoundedCornerShape(15.dp))
+                                ) {
+                                    // Header Row
+                                    HorizontalDivider(
+                                        color = ThemeColors.getLightGreyColor(isDarkTheme),
+                                        thickness = 1.dp
+                                    )
+
+                                    upcomingSubs.forEachIndexed { index, sub ->
+                                        val fallbackColor = remember(sub.key, sub.name) {
+                                            val colors = listOf(
+                                                Color(0xFF3D5AFE), Color(0xFF00C853), Color(0xFFFF6D00),
+                                                Color(0xFFD500F9), Color(0xFFFF4081), Color(0xFF00BFA5), Color(0xFFFFAB00)
+                                            )
+                                            val seed = sub.key.ifBlank { sub.name }
+                                            colors[Math.abs(seed.hashCode()) % colors.size]
+                                        }
+
+                                        val formattedDate = remember(sub.nextBillingDate) {
+                                            SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(sub.nextBillingDate))
+                                        }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Service Logo & Name
+                                            Row(
+                                                modifier = Modifier.weight(1.5f),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val service = viewModel.getServiceByKey(sub.key)
+                                                val logoId = service?.logo ?: sub.logoResId
+                                                val painter = runCatching {
+                                                    if (logoId != null && logoId != 0 && logoId != R.drawable.empty) {
+                                                        painterResource(id = logoId)
+                                                    } else null
+                                                }.getOrNull()
+
+                                                if (painter != null) {
+                                                    Image(
+                                                        painter = painter,
+                                                        contentDescription = sub.name,
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFF3F3F3)),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                } else {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .clip(CircleShape)
+                                                            .background(fallbackColor),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = sub.name.firstOrNull()?.uppercase() ?: "",
+                                                            color = Color.White,
+                                                            fontSize = 12.sp,
+                                                            fontFamily = manropeBold,
+                                                            style = TextStyle(
+                                                                platformStyle = PlatformTextStyle(
+                                                                    includeFontPadding = false
+                                                                )
+                                                            ),
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                    }
+                                                }
+
+                                                Spacer(modifier = Modifier.width(10.dp))
+
+                                                Text(
+                                                    text = sub.name,
+                                                    fontFamily = manropeBold,
+                                                    fontSize = 14.sp,
+                                                    color = ThemeColors.getTextColor(isDarkTheme),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            // Date
+                                            Text(
+                                                text = formattedDate,
+                                                fontFamily = manropeBold,
+                                                fontSize = 13.sp,
+                                                color = ThemeColors.getDarkGreyColor(isDarkTheme),
+                                                textAlign = TextAlign.End,
+                                                modifier = Modifier.weight(1f)
+                                            )
+
+                                            // Price
+                                            Text(
+                                                text = formatCurrency(sub.price, sub.currency),
+                                                fontFamily = manropeExtraBold,
+                                                fontSize = 14.sp,
+                                                color = ThemeColors.getTextColor(isDarkTheme),
+                                                textAlign = TextAlign.End,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                        if (index < upcomingSubs.lastIndex) {
+                                            HorizontalDivider(
+                                                color = ThemeColors.getLightGreyColor(isDarkTheme),
+                                                thickness = 1.dp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
 
@@ -371,17 +523,19 @@ fun CalendarScreen(
                                         .padding(vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val isDrawable = ev.logoResId != null &&
-                                            ev.logoResId != 0 &&
-                                            ev.logoResId != -1 &&
-                                            ev.logoResId != R.drawable.empty &&
+                                    val service = viewModel.getServiceByKey(ev.key)
+                                    val logoId = service?.logo ?: ev.logoResId
+                                    val isDrawable = logoId != null &&
+                                            logoId != 0 &&
+                                            logoId != -1 &&
+                                            logoId != R.drawable.empty &&
                                             runCatching {
-                                                context.resources.getResourceTypeName(ev.logoResId)
+                                                context.resources.getResourceTypeName(logoId)
                                             }.getOrNull() == "drawable"
 
                                     if (isDrawable) {
                                         val painter = runCatching {
-                                            painterResource(id = ev.logoResId!!)
+                                            painterResource(id = logoId)
                                         }.getOrNull()
                                         if (painter != null) {
                                             Image(
@@ -537,6 +691,9 @@ private fun CalendarDayCell(
 
     val colors = listOf(
         Color(0xFFCE93D8),
+        Color(0xFFFFAB40),
+        Color(0xFF536DFE),
+        Color(0xFFFF5252),
     )
     val randomColor = colors.random()
     val manropeBold = FontFamily(Font(R.font.manrope_bold))
@@ -640,17 +797,24 @@ fun FallbackAvatar(
 
     Box(
         modifier = Modifier
-            .size(20.dp)
             .clip(CircleShape)
+            .size(15.dp)
             .background(randomColor),
         contentAlignment = Alignment.Center
     ) {
 
         Text(
             text = name.firstOrNull()?.uppercase() ?: "",
-            color = ThemeColors.getTextColor(isDarkTheme),
-            fontSize = 9.sp,
-            fontFamily = manropeBold
+            color = Color.White,
+            fontSize = 8.sp,
+            fontFamily = manropeBold,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(
+                    includeFontPadding = false
+                ),
+                lineHeight = 8.sp
+            ),
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -718,3 +882,5 @@ private fun weekdayRowLabels(): List<String> {
     }
     return out
 }
+
+

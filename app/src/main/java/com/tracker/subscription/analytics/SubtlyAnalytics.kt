@@ -33,6 +33,10 @@ object SubtlyAnalytics {
         logEvent("onboarding_complete")
     }
 
+    fun logOnboardingSkip() {
+        logEvent("onboarding_skip")
+    }
+
     // 2. Authentication Events
     fun logSignInStart() {
         logEvent("sign_in_start")
